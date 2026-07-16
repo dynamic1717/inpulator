@@ -157,7 +157,7 @@
       }
 
       activeContext = cloneContext(context);
-      showButton(getButtonPosition(activeContext, event));
+      showButton(getButtonPosition(activeContext, event), activeContext.text.length);
     } catch (error) {
       if (!handleInvalidatedContext(error)) throw error;
     }
@@ -203,43 +203,81 @@
     }
   }
 
-  function clampToViewport(x, y) {
+  function getButtonDimensions(counterText) {
+    const counterWidth = Math.max(52, (counterText?.length || 7) * 6.5);
+    return {
+      width: Math.max(44, counterWidth + 12),
+      height: 44,
+    };
+  }
+
+  function clampToViewport(x, y, dimensions = { width: 72, height: 44 }) {
     const margin = 8;
-    const buttonSize = 36;
+    const { width: buttonWidth, height: buttonHeight } = dimensions;
 
     return {
       x: Math.min(
-        Math.max(margin, x - buttonSize / 2),
-        window.innerWidth - buttonSize - margin
+        Math.max(margin, x - buttonWidth / 2),
+        window.innerWidth - buttonWidth - margin
       ),
       y: Math.min(
         Math.max(margin, y),
-        window.innerHeight - buttonSize - margin
+        window.innerHeight - buttonHeight - margin
       ),
     };
   }
 
-  function setButtonIcon(mode) {
+  function setButtonContent(mode, selectedChars, remaining) {
     if (!button) return;
-    button.innerHTML = mode === 'loading' ? LOADING_ICON_SVG : TRANSLATE_ICON_SVG;
+
+    if (mode === 'loading') {
+      button.innerHTML = LOADING_ICON_SVG;
+      button.classList.remove('input-translate-btn--with-counter');
+      return;
+    }
+
+    const counter =
+      remaining != null ? `${selectedChars}/${remaining}` : `${selectedChars}/…`;
+
+    button.classList.add('input-translate-btn--with-counter');
+    button.innerHTML = `${TRANSLATE_ICON_SVG}<span class="input-translate-counter">${counter}</span>`;
+    button.title = `Translate to English (${counter} chars, Alt+Shift+T)`;
   }
 
-  function showButton(position) {
+  async function fetchQuotaRemaining() {
+    try {
+      const quota = await chrome.runtime.sendMessage({ type: 'GET_QUOTA' });
+      if (chrome.runtime.lastError) return null;
+      return quota?.remaining ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function showButton(position, selectedChars) {
     if (!button) {
       button = document.createElement('button');
       button.id = 'input-translate-btn';
       button.type = 'button';
-      button.title = 'Translate to English (Alt+Shift+T)';
       button.setAttribute('aria-label', 'Translate to English');
       button.addEventListener('mousedown', (e) => e.preventDefault());
       button.addEventListener('click', onTranslateClick);
       document.documentElement.appendChild(button);
     }
 
-    setButtonIcon('translate');
+    setButtonContent('translate', selectedChars, null);
     button.disabled = false;
-    button.style.left = `${position.x}px`;
-    button.style.top = `${position.y}px`;
+
+    const remaining = await fetchQuotaRemaining();
+    setButtonContent('translate', selectedChars, remaining);
+
+    const counterText =
+      remaining != null ? `${selectedChars}/${remaining}` : `${selectedChars}/…`;
+    const dims = getButtonDimensions(counterText);
+    const adjusted = clampToViewport(position.x, position.y, dims);
+
+    button.style.left = `${adjusted.x}px`;
+    button.style.top = `${adjusted.y}px`;
     button.hidden = false;
   }
 
@@ -257,11 +295,12 @@
     if (isTranslating) return;
 
     const snapshot = cloneContext(context);
+    const selectedChars = snapshot.text.length;
     isTranslating = true;
 
     if (button) {
       button.disabled = true;
-      setButtonIcon('loading');
+      setButtonContent('loading', selectedChars, null);
     }
 
     try {
@@ -288,7 +327,9 @@
       showToast(error.message || 'Translation failed');
       if (button) {
         button.disabled = false;
-        setButtonIcon('translate');
+        fetchQuotaRemaining().then((remaining) => {
+          setButtonContent('translate', selectedChars, remaining);
+        });
       }
     } finally {
       isTranslating = false;

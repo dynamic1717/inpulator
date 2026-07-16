@@ -17,9 +17,29 @@
   transition: background 0.15s, opacity 0.15s;
 }
 
+#input-translate-btn.input-translate-btn--with-counter {
+  flex-direction: column;
+  gap: 1px;
+  width: auto;
+  min-width: 44px;
+  height: auto;
+  padding: 4px 6px 3px;
+}
+
 #input-translate-btn svg {
   display: block;
   flex-shrink: 0;
+}
+
+#input-translate-btn .input-translate-counter {
+  display: block;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  opacity: 0.95;
 }
 
 #input-translate-btn .input-translate-spinner {
