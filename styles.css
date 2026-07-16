@@ -1,0 +1,68 @@
+#input-translate-btn {
+  all: initial;
+  position: fixed;
+  z-index: 2147483647;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: #1a73e8;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s, opacity 0.15s;
+}
+
+#input-translate-btn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+#input-translate-btn .input-translate-spinner {
+  animation: input-translate-spin 0.8s linear infinite;
+}
+
+@keyframes input-translate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#input-translate-btn:hover:not(:disabled) {
+  background: #1557b0;
+}
+
+#input-translate-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+#input-translate-btn[hidden] {
+  display: none !important;
+}
+
+#input-translate-toast {
+  all: initial;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  max-width: 320px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #323232;
+  color: #fff;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+#input-translate-toast[hidden] {
+  display: none !important;
+}
