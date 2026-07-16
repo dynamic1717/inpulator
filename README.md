@@ -42,6 +42,8 @@ floating button UI  ←   перевод
 | Файл | Назначение |
 |------|------------|
 | `manifest.json` | Manifest V3, permissions, content scripts, commands |
+| `shadow-dom.js` | Shadow DOM piercing, поиск editable |
+| `field-clipboard.js` | Clipboard fallback для замены текста |
 | `field-native.js` | Логика для `<input>` / `<textarea>` |
 | `field-editable.js` | Логика для `contenteditable` |
 | `content.js` | UI кнопки, события, orchestration |
@@ -52,6 +54,7 @@ floating button UI  ←   перевод
 
 - `<all_urls>` — инъекция content script
 - `host_permissions` — доступ к API перевода
+- `clipboardRead`, `clipboardWrite` — fallback через буфер обмена
 
 ## Определение русского текста
 
@@ -79,8 +82,8 @@ floating button UI  ←   перевод
 | `<input>`, `<textarea>` | Низкая | ✅ |
 | `contenteditable` (Gmail, Slack) | Высокая | ✅ |
 | React/Vue controlled inputs | Средняя — нужен `dispatchEvent('input')` | ✅ |
+| Closed Shadow DOM (Gmail, ChatGPT, Claude) | Shadow piercing + clipboard fallback | ✅ |
 | Cross-origin iframe | Недоступно | — |
-| Closed Shadow DOM | Недоступно | — |
 
 ## MVP Scope
 
@@ -93,6 +96,11 @@ floating button UI  ←   перевод
 ### Фаза 2 ✅
 - [x] Поддержка `contenteditable`
 - [x] Горячая клавиша `Alt+Shift+T`
+
+### Фаза 2.5 ✅
+- [x] Shadow DOM piercing через `chrome.dom.openOrClosedShadowRoot`
+- [x] Обход shadow boundary при поиске `contenteditable`
+- [x] Clipboard fallback (`insertText` → paste) для сложных редакторов
 
 ### Фаза 3 (опционально)
 - [ ] Chrome Translator API (offline)
@@ -132,9 +140,9 @@ TypeScript для MVP не обязателен: расширение мален
 
 ## Ограничения contenteditable
 
-- **Closed Shadow DOM** (часть Slack/Discord) — content script не проникает
-- **Rich text** — вставляется plain text, форматирование выделения теряется
 - **Cross-origin iframe** — недоступно
+- **Rich text** — вставляется plain text, форматирование выделения теряется
+- **Clipboard fallback** — может перезаписать буфер обмена на время вставки
 
 ## Структура проекта
 
@@ -142,6 +150,8 @@ TypeScript для MVP не обязателен: расширение мален
 input-translate-ext/
 ├── manifest.json       # конфигурация расширения
 ├── background.js       # service worker, API, hotkey relay
+├── shadow-dom.js       # piercing closed/open shadow roots
+├── field-clipboard.js  # clipboard fallback
 ├── field-native.js     # input/textarea: выделение и замена
 ├── field-editable.js   # contenteditable: выделение и замена
 ├── content.js          # UI кнопки, события, orchestration
@@ -151,10 +161,11 @@ input-translate-ext/
 
 ## Статус
 
-**Фаза 1 и Фаза 2 реализованы.**
+**Фаза 1, 2 и 2.5 реализованы.**
 
-- [x] `input`, `textarea`, `contenteditable`
+- [x] `input`, `textarea`, `contenteditable` (включая shadow DOM)
 - [x] Плавающая кнопка при кириллице
 - [x] Горячая клавиша Alt+Shift+T
+- [x] Shadow piercing + clipboard fallback
 - [x] Интеграция с MyMemory
 - [x] Loading и error states

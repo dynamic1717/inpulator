@@ -1,220 +1,337 @@
-const CYRILLIC_RE = /[\u0400-\u04FF]/;
+(function () {
+  'use strict';
 
-const TRANSLATE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
+  if (window.__inputTranslateContent) return;
 
-const LOADING_ICON_SVG = `<svg class="input-translate-spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="14 42"/></svg>`;
+  const InputTranslate = window.InputTranslate || {};
+  const CYRILLIC_RE = /[\u0400-\u04FF]/;
 
-let button = null;
-let toast = null;
-let activeContext = null;
-let isTranslating = false;
+  const TRANSLATE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
 
-init();
+  const LOADING_ICON_SVG = `<svg class="input-translate-spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="14 42"/></svg>`;
 
-function init() {
-  document.addEventListener('mouseup', onSelectionChange, true);
-  document.addEventListener('keyup', onSelectionChange, true);
-  document.addEventListener('mousedown', onDocumentMouseDown, true);
-  document.addEventListener('scroll', hideButton, true);
-  window.addEventListener('resize', hideButton);
+  let button = null;
+  let toast = null;
+  let activeContext = null;
+  let isTranslating = false;
 
-  chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'TRANSLATE_HOTKEY') {
-      onHotkeyTranslate();
+  init();
+
+  function isActive() {
+    if (window.__inputTranslateInvalidated) return false;
+    return InputTranslate.extension?.isExtensionContextValid() ?? true;
+  }
+
+  function notifyReloadNeeded() {
+    if (window.__inputTranslateReloadNotified) return;
+    window.__inputTranslateReloadNotified = true;
+    showToast('Reload page to use Input Translate');
+  }
+
+  function handleInvalidatedContext(error) {
+    if (!String(error?.message || error).includes('Extension context invalidated')) {
+      return false;
     }
-  });
-}
 
-function detectSelectionContext() {
-  const nativeContext = InputTranslate.native.getNativeContext(
-    document.activeElement
-  );
-  if (nativeContext) return nativeContext;
+    window.__inputTranslateInvalidated = true;
+    InputTranslate.extension?.markExtensionInvalidated?.();
+    notifyReloadNeeded();
+    hideButton();
+    return true;
+  }
 
-  return InputTranslate.editable.getEditableContext();
-}
+  function init() {
+    if (!isActive()) return;
 
-function isTranslatableContext(context) {
-  return (
-    context &&
-    context.text.trim() &&
-    CYRILLIC_RE.test(context.text)
-  );
-}
+    document.addEventListener('mouseup', onSelectionChange, true);
+    document.addEventListener('keyup', onSelectionChange, true);
+    document.addEventListener('mousedown', onDocumentMouseDown, true);
+    document.addEventListener('scroll', hideButton, true);
+    window.addEventListener('resize', hideButton);
 
-function getButtonPosition(context, event) {
-  if (context.type === 'native') {
-    return InputTranslate.native.getNativeButtonPosition(
-      context,
-      event,
-      clampToViewport
+    try {
+      chrome.runtime.onMessage.addListener((message) => {
+        if (message.type === 'TRANSLATE_HOTKEY') {
+          onHotkeyTranslate();
+        }
+      });
+    } catch (error) {
+      handleInvalidatedContext(error);
+    }
+  }
+
+  function detectSelectionContext() {
+    try {
+      const native = InputTranslate.native;
+      if (native) {
+        const nativeContext = native.getNativeContext(document.activeElement);
+        if (nativeContext) return nativeContext;
+      }
+
+      const editable = InputTranslate.editable;
+      if (editable) {
+        return editable.getEditableContext();
+      }
+    } catch (error) {
+      if (handleInvalidatedContext(error)) return null;
+      throw error;
+    }
+
+    return null;
+  }
+
+  function isTranslatableContext(context) {
+    return (
+      context &&
+      context.text.trim() &&
+      CYRILLIC_RE.test(context.text)
     );
   }
 
-  return InputTranslate.editable.getEditableButtonPosition(
-    context,
-    clampToViewport
-  );
-}
+  function getButtonPosition(context, event) {
+    if (context.type === 'native' && InputTranslate.native) {
+      return InputTranslate.native.getNativeButtonPosition(
+        context,
+        event,
+        clampToViewport
+      );
+    }
 
-function replaceContext(context, newText) {
-  if (context.type === 'native') {
-    InputTranslate.native.replaceNativeSelection(context, newText);
-    return;
+    if (context.type === 'editable' && InputTranslate.editable) {
+      return InputTranslate.editable.getEditableButtonPosition(
+        context,
+        clampToViewport
+      );
+    }
+
+    if (context.meta?.range) {
+      const rect = context.meta.range.getBoundingClientRect();
+      return clampToViewport(rect.left + rect.width / 2, rect.top - 36);
+    }
+
+    if (event?.clientX != null && event?.clientY != null) {
+      return clampToViewport(event.clientX, event.clientY - 40);
+    }
+
+    return clampToViewport(window.innerWidth / 2, window.innerHeight / 2);
   }
 
-  InputTranslate.editable.replaceEditableSelection(context, newText);
-}
-
-function onDocumentMouseDown(event) {
-  if (button?.contains(event.target)) return;
-  if (toast?.contains(event.target)) return;
-  hideButton();
-}
-
-function onSelectionChange(event) {
-  if (isTranslating) return;
-  if (button?.contains(event.target)) return;
-
-  requestAnimationFrame(() => {
-    const context = detectSelectionContext();
-    if (!isTranslatableContext(context)) {
-      hideButton();
+  async function applyTranslation(context, newText) {
+    if (context.type === 'native') {
+      InputTranslate.native?.replaceNativeSelection(context, newText);
       return;
     }
 
-    activeContext = context;
-    showButton(getButtonPosition(context, event));
-  });
-}
-
-function onHotkeyTranslate() {
-  if (isTranslating) return;
-
-  const context = detectSelectionContext();
-  if (!isTranslatableContext(context)) return;
-
-  translateSelection(context);
-}
-
-function clampToViewport(x, y) {
-  const margin = 8;
-  const buttonSize = 36;
-
-  return {
-    x: Math.min(
-      Math.max(margin, x - buttonSize / 2),
-      window.innerWidth - buttonSize - margin
-    ),
-    y: Math.min(
-      Math.max(margin, y),
-      window.innerHeight - buttonSize - margin
-    ),
-  };
-}
-
-function setButtonIcon(mode) {
-  if (!button) return;
-  button.innerHTML = mode === 'loading' ? LOADING_ICON_SVG : TRANSLATE_ICON_SVG;
-}
-
-function showButton(position) {
-  if (!button) {
-    button = document.createElement('button');
-    button.id = 'input-translate-btn';
-    button.type = 'button';
-    button.title = 'Translate to English (Alt+Shift+T)';
-    button.setAttribute('aria-label', 'Translate to English');
-    button.addEventListener('mousedown', (e) => e.preventDefault());
-    button.addEventListener('click', onTranslateClick);
-    document.documentElement.appendChild(button);
-  }
-
-  setButtonIcon('translate');
-  button.disabled = false;
-  button.style.left = `${position.x}px`;
-  button.style.top = `${position.y}px`;
-  button.hidden = false;
-}
-
-function hideButton() {
-  if (button) button.hidden = true;
-  if (!isTranslating) activeContext = null;
-}
-
-async function onTranslateClick() {
-  if (!activeContext || isTranslating) return;
-  await translateSelection(activeContext);
-}
-
-async function translateSelection(context) {
-  if (isTranslating) return;
-
-  const snapshot = cloneContext(context);
-  isTranslating = true;
-
-  if (button) {
-    button.disabled = true;
-    setButtonIcon('loading');
-  }
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: 'TRANSLATE',
-      text: snapshot.text,
-    });
-
-    if (chrome.runtime.lastError) {
-      throw new Error(chrome.runtime.lastError.message);
-    }
-    if (response?.error) {
-      throw new Error(response.error);
+    if (context.type === 'editable') {
+      const replaced =
+        await InputTranslate.editable?.replaceEditableSelectionWithFallback(
+          context,
+          newText
+        );
+      if (replaced) return;
+      throw new Error('Could not replace text');
     }
 
-    replaceContext(snapshot, response.translatedText);
+    if (context.type === 'clipboard') {
+      const replaced = await InputTranslate.clipboard?.replaceSelection(
+        newText,
+        context.meta?.range
+      );
+      if (replaced) return;
+      throw new Error('Could not replace text');
+    }
+  }
+
+  function onDocumentMouseDown(event) {
+    if (button?.contains(event.target)) return;
+    if (toast?.contains(event.target)) return;
     hideButton();
-  } catch (error) {
-    showToast(error.message || 'Translation failed');
-    if (button) {
-      button.disabled = false;
-      setButtonIcon('translate');
-    }
-  } finally {
-    isTranslating = false;
-    activeContext = null;
   }
-}
 
-function cloneContext(context) {
-  if (context.type === 'native') {
+  function onSelectionChange(event) {
+    if (!isActive()) {
+      notifyReloadNeeded();
+      return;
+    }
+    if (isTranslating) return;
+    if (button?.contains(event.target)) return;
+
+    try {
+      const context = detectSelectionContext();
+      if (!isTranslatableContext(context)) {
+        hideButton();
+        return;
+      }
+
+      activeContext = cloneContext(context);
+      const position = getButtonPosition(activeContext, event);
+
+      requestAnimationFrame(() => {
+        if (!isActive() || !isTranslatableContext(activeContext)) return;
+        showButton(position);
+      });
+    } catch (error) {
+      if (!handleInvalidatedContext(error)) throw error;
+    }
+  }
+
+  async function onHotkeyTranslate() {
+    if (!isActive()) {
+      notifyReloadNeeded();
+      return;
+    }
+    if (isTranslating) return;
+
+    try {
+      let context = detectSelectionContext();
+      if (!isTranslatableContext(context)) {
+        context = await InputTranslate.clipboard?.captureSelectionText();
+      }
+      if (!isTranslatableContext(context)) return;
+
+      await translateSelection(context);
+    } catch (error) {
+      if (!handleInvalidatedContext(error)) throw error;
+    }
+  }
+
+  function clampToViewport(x, y) {
+    const margin = 8;
+    const buttonSize = 36;
+
     return {
-      type: 'native',
-      field: context.field,
-      text: context.text,
-      meta: { ...context.meta },
+      x: Math.min(
+        Math.max(margin, x - buttonSize / 2),
+        window.innerWidth - buttonSize - margin
+      ),
+      y: Math.min(
+        Math.max(margin, y),
+        window.innerHeight - buttonSize - margin
+      ),
     };
   }
 
-  return {
-    type: 'editable',
-    field: context.field,
-    text: context.text,
-    meta: { range: context.meta.range.cloneRange() },
-  };
-}
-
-function showToast(message) {
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'input-translate-toast';
-    document.documentElement.appendChild(toast);
+  function setButtonIcon(mode) {
+    if (!button) return;
+    button.innerHTML = mode === 'loading' ? LOADING_ICON_SVG : TRANSLATE_ICON_SVG;
   }
 
-  toast.textContent = message;
-  toast.hidden = false;
+  function showButton(position) {
+    if (!button) {
+      button = document.createElement('button');
+      button.id = 'input-translate-btn';
+      button.type = 'button';
+      button.title = 'Translate to English (Alt+Shift+T)';
+      button.setAttribute('aria-label', 'Translate to English');
+      button.addEventListener('mousedown', (e) => e.preventDefault());
+      button.addEventListener('click', onTranslateClick);
+      document.documentElement.appendChild(button);
+    }
 
-  clearTimeout(showToast._timer);
-  showToast._timer = setTimeout(() => {
-    toast.hidden = true;
-  }, 3000);
-}
+    setButtonIcon('translate');
+    button.disabled = false;
+    button.style.left = `${position.x}px`;
+    button.style.top = `${position.y}px`;
+    button.hidden = false;
+  }
+
+  function hideButton() {
+    if (button) button.hidden = true;
+    if (!isTranslating) activeContext = null;
+  }
+
+  async function onTranslateClick() {
+    if (!activeContext || isTranslating) return;
+    await translateSelection(activeContext);
+  }
+
+  async function translateSelection(context) {
+    if (isTranslating) return;
+
+    const snapshot = cloneContext(context);
+    isTranslating = true;
+
+    if (button) {
+      button.disabled = true;
+      setButtonIcon('loading');
+    }
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'TRANSLATE',
+        text: snapshot.text,
+      });
+
+      if (chrome.runtime.lastError) {
+        const lastError = chrome.runtime.lastError.message || '';
+        if (lastError.includes('Extension context invalidated')) {
+          throw new Error('Extension context invalidated');
+        }
+        throw new Error(lastError);
+      }
+      if (response?.error) {
+        throw new Error(response.error);
+      }
+
+      await applyTranslation(snapshot, response.translatedText);
+      hideButton();
+    } catch (error) {
+      if (handleInvalidatedContext(error)) return;
+      showToast(error.message || 'Translation failed');
+      if (button) {
+        button.disabled = false;
+        setButtonIcon('translate');
+      }
+    } finally {
+      isTranslating = false;
+      activeContext = null;
+    }
+  }
+
+  function cloneContext(context) {
+    if (context.type === 'native') {
+      return {
+        type: 'native',
+        field: context.field,
+        text: context.text,
+        meta: { ...context.meta },
+      };
+    }
+
+    if (context.type === 'editable') {
+      return {
+        type: 'editable',
+        field: context.field,
+        text: context.text,
+        meta: { range: context.meta.range.cloneRange() },
+      };
+    }
+
+    return {
+      type: 'clipboard',
+      field: null,
+      text: context.text,
+      meta: context.meta?.range
+        ? { range: context.meta.range.cloneRange() }
+        : {},
+    };
+  }
+
+  function showToast(message) {
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'input-translate-toast';
+      document.documentElement.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.hidden = false;
+
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => {
+      toast.hidden = true;
+    }, 3000);
+  }
+
+  window.__inputTranslateContent = true;
+})();

@@ -1,94 +1,164 @@
-const InputTranslate = (window.InputTranslate = window.InputTranslate || {});
+(function () {
+  'use strict';
 
-function getContentEditableRoot(node) {
-  let el = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  if (window.__inputTranslateEditable) return;
 
-  while (el) {
-    if (el.isContentEditable && el.getAttribute('contenteditable') !== 'false') {
-      return el;
+  window.InputTranslate = window.InputTranslate || {};
+
+  const shadow = window.InputTranslate.shadow;
+  if (!shadow) {
+    window.InputTranslate.editable = {
+      getEditableContext: () => null,
+      getEditableButtonPosition: (_context, clampToViewport) =>
+        clampToViewport(window.innerWidth / 2, window.innerHeight / 2),
+      replaceEditableSelection: () => false,
+      replaceEditableSelectionWithFallback: async () => false,
+    };
+    window.__inputTranslateEditable = true;
+    return;
+  }
+
+  const {
+    findEditableFromNode,
+    findEditableNearFocus,
+    isEditableElement,
+  } = shadow;
+
+  function isEditableRoot(element) {
+    return isEditableElement(element);
+  }
+
+  function buildEditableContext(range, root) {
+    const text = range.toString();
+    if (!text.trim()) return null;
+
+    return {
+      type: 'editable',
+      field: root,
+      text,
+      meta: { range: range.cloneRange() },
+    };
+  }
+
+  function getEditableContextFromSelection() {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+      return null;
     }
-    el = el.parentElement;
+
+    const range = selection.getRangeAt(0);
+    const root =
+      findEditableFromNode(range.commonAncestorContainer) ||
+      findEditableFromNode(selection.anchorNode) ||
+      findEditableFromNode(selection.focusNode);
+
+    if (!root || !isEditableRoot(root)) return null;
+
+    return buildEditableContext(range, root);
   }
 
-  return null;
-}
+  function getEditableContext() {
+    const fromSelection = getEditableContextFromSelection();
+    if (fromSelection) return fromSelection;
 
-function isEditableRoot(element) {
-  if (!element?.isContentEditable) return false;
-  if (element.getAttribute('contenteditable') === 'false') return false;
-  if (element.getAttribute('aria-readonly') === 'true') return false;
-  if (element.isContentEditable === false) return false;
-  return true;
-}
+    const focusedRoot = findEditableNearFocus();
+    if (!focusedRoot) return null;
 
-function getEditableContext() {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-    return null;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+      return null;
+    }
+
+    const range = selection.getRangeAt(0);
+    return buildEditableContext(range, focusedRoot);
   }
 
-  const range = selection.getRangeAt(0);
-  const root = getContentEditableRoot(range.commonAncestorContainer);
-  if (!root || !isEditableRoot(root)) return null;
+  function getEditableButtonPosition(context, clampToViewport) {
+    const rect = context.meta.range.getBoundingClientRect();
 
-  const text = range.toString();
-  if (!text.trim()) return null;
+    if (rect.width === 0 && rect.height === 0) {
+      const fieldRect = context.field.getBoundingClientRect();
+      return clampToViewport(
+        fieldRect.left + fieldRect.width / 2,
+        fieldRect.top - 36
+      );
+    }
 
-  return {
-    type: 'editable',
-    field: root,
-    text,
-    meta: { range: range.cloneRange() },
-  };
-}
+    return clampToViewport(rect.left + rect.width / 2, rect.top - 36);
+  }
 
-function getEditableButtonPosition(context, clampToViewport) {
-  const rect = context.meta.range.getBoundingClientRect();
+  function dispatchInputEvent(field, newText) {
+    if (!field) return;
 
-  if (rect.width === 0 && rect.height === 0) {
-    const fieldRect = context.field.getBoundingClientRect();
-    return clampToViewport(
-      fieldRect.left + fieldRect.width / 2,
-      fieldRect.top - 36
+    field.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        cancelable: true,
+        inputType: 'insertText',
+        data: newText,
+        composed: true,
+      })
     );
   }
 
-  return clampToViewport(rect.left + rect.width / 2, rect.top - 36);
-}
+  function replaceEditableSelection(context, newText) {
+    const { field, meta } = context;
+    const range = meta.range.cloneRange();
+    const selection = window.getSelection();
 
-function replaceEditableSelection(context, newText) {
-  const { field, meta } = context;
-  const range = meta.range.cloneRange();
-  const selection = window.getSelection();
+    if (!selection) return false;
 
-  selection.removeAllRanges();
-  selection.addRange(range);
-  field.focus();
-
-  const inserted = document.execCommand('insertText', false, newText);
-
-  if (!inserted) {
-    range.deleteContents();
-    const textNode = document.createTextNode(newText);
-    range.insertNode(textNode);
-    range.setStartAfter(textNode);
-    range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
+    field.focus();
+
+    const inserted = document.execCommand('insertText', false, newText);
+
+    if (!inserted) {
+      try {
+        range.deleteContents();
+        const textNode = document.createTextNode(newText);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } catch {
+        return false;
+      }
+    }
+
+    dispatchInputEvent(field, newText);
+    return true;
   }
 
-  field.dispatchEvent(
-    new InputEvent('input', {
-      bubbles: true,
-      cancelable: true,
-      inputType: 'insertText',
-      data: newText,
-    })
-  );
-}
+  async function replaceEditableSelectionWithFallback(context, newText) {
+    if (replaceEditableSelection(context, newText)) {
+      return true;
+    }
 
-InputTranslate.editable = {
-  getEditableContext,
-  getEditableButtonPosition,
-  replaceEditableSelection,
-};
+    const clipboard = window.InputTranslate.clipboard;
+    if (!clipboard) return false;
+
+    const replaced = await clipboard.replaceSelection(
+      newText,
+      context.meta.range
+    );
+
+    if (replaced) {
+      dispatchInputEvent(context.field, newText);
+      return true;
+    }
+
+    return false;
+  }
+
+  window.InputTranslate.editable = {
+    getEditableContext,
+    getEditableButtonPosition,
+    replaceEditableSelection,
+    replaceEditableSelectionWithFallback,
+  };
+
+  window.__inputTranslateEditable = true;
+})();
