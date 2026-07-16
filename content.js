@@ -43,9 +43,9 @@
   function init() {
     if (!isActive()) return;
 
-    document.addEventListener('mouseup', onSelectionChange, true);
-    document.addEventListener('keyup', onSelectionChange, true);
-    document.addEventListener('mousedown', onDocumentMouseDown, true);
+    document.addEventListener('mouseup', onPointerSelectionChange, true);
+    document.addEventListener('keyup', onPointerSelectionChange, true);
+    document.addEventListener('selectionchange', onDocumentSelectionChange);
     document.addEventListener('scroll', hideButton, true);
     window.addEventListener('resize', hideButton);
 
@@ -142,19 +142,12 @@
     }
   }
 
-  function onDocumentMouseDown(event) {
-    if (button?.contains(event.target)) return;
-    if (toast?.contains(event.target)) return;
-    hideButton();
-  }
+  let selectionChangeTimer = null;
 
-  function onSelectionChange(event) {
-    if (!isActive()) {
-      notifyReloadNeeded();
-      return;
-    }
+  function syncButtonWithSelection(event) {
+    if (!isActive()) return;
     if (isTranslating) return;
-    if (button?.contains(event.target)) return;
+    if (event?.target && button?.contains(event.target)) return;
 
     try {
       const context = detectSelectionContext();
@@ -164,15 +157,30 @@
       }
 
       activeContext = cloneContext(context);
-      const position = getButtonPosition(activeContext, event);
-
-      requestAnimationFrame(() => {
-        if (!isActive() || !isTranslatableContext(activeContext)) return;
-        showButton(position);
-      });
+      showButton(getButtonPosition(activeContext, event));
     } catch (error) {
       if (!handleInvalidatedContext(error)) throw error;
     }
+  }
+
+  function onPointerSelectionChange(event) {
+    if (!isActive()) {
+      notifyReloadNeeded();
+      return;
+    }
+    if (isTranslating) return;
+    if (button?.contains(event.target)) return;
+
+    requestAnimationFrame(() => syncButtonWithSelection(event));
+  }
+
+  function onDocumentSelectionChange() {
+    if (isTranslating) return;
+
+    clearTimeout(selectionChangeTimer);
+    selectionChangeTimer = setTimeout(() => {
+      syncButtonWithSelection(null);
+    }, 0);
   }
 
   async function onHotkeyTranslate() {
