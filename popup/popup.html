@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Input Translate</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header class="popup__header">
+        <img
+          class="popup__logo"
+          src="../icons/icon48.png"
+          alt=""
+          width="28"
+          height="28"
+        />
+        <h1 class="popup__title">Input Translate</h1>
+      </header>
+
+      <section class="popup__section" aria-labelledby="quota-label">
+        <div class="popup__row">
+          <span id="quota-label" class="popup__label">Лимит за день</span>
+          <span id="quota-value" class="popup__value">… / …</span>
+        </div>
+        <div class="popup__meter" aria-hidden="true">
+          <div id="quota-bar" class="popup__meter-bar"></div>
+        </div>
+      </section>
+
+      <section class="popup__section">
+        <label class="popup__toggle">
+          <span class="popup__toggle-text">
+            <span class="popup__label">Расширение</span>
+            <span class="popup__hint">Кнопка перевода и горячая клавиша</span>
+          </span>
+          <input id="enabled-toggle" type="checkbox" role="switch" />
+        </label>
+
+        <label class="popup__toggle">
+          <span class="popup__toggle-text">
+            <span class="popup__label">Счётчик на кнопке</span>
+            <span class="popup__hint">Показывать выделено / остаток</span>
+          </span>
+          <input id="counter-toggle" type="checkbox" role="switch" />
+        </label>
+      </section>
+    </main>
+    <script src="../settings.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

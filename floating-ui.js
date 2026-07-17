@@ -46,9 +46,7 @@
 <rect width="62" height="62" fill="white"/>
 </clipPath>
 </defs>
-</svg>
-
-`;
+</svg>`;
   const LOADING_ICON = `<svg class="input-translate-spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="14 42"/></svg>`;
 
   function formatCount(value) {
@@ -73,13 +71,21 @@
       document.documentElement.appendChild(button);
     }
 
-    function setTranslate(selectedChars, remaining) {
+    function setTranslate(selectedChars, remaining, { showCounter = true } = {}) {
       ensureButton();
-      const counter = `${formatCount(selectedChars)}/${formatCount(remaining)}`;
+      button.disabled = false;
+
+      if (!showCounter) {
+        button.classList.remove('input-translate-btn--with-counter');
+        button.innerHTML = TRANSLATE_ICON;
+        button.title = 'Translate to English (Alt+Shift+T)';
+        return;
+      }
+
+      const counter = `${formatCount(selectedChars)} / ${formatCount(remaining)}`;
       button.classList.add('input-translate-btn--with-counter');
       button.innerHTML = `${TRANSLATE_ICON}<span class="input-translate-counter">${counter}</span>`;
       button.title = `Translate to English (${counter} chars, Alt+Shift+T)`;
-      button.disabled = false;
     }
 
     return {

@@ -6,11 +6,13 @@
   const InputTranslate = window.InputTranslate || {};
   const contextTools = InputTranslate.selectionContext;
   const runtime = InputTranslate.runtimeClient;
+  const settingsApi = InputTranslate.settings;
   let activeContext = null;
   let renderedContext = null;
   let isTranslating = false;
   let buttonRenderVersion = 0;
   let lastHotkeyAt = 0;
+  let settings = { ...settingsApi?.DEFAULT_SETTINGS };
   const ui = InputTranslate.floatingUi?.create({ onTranslate: onTranslateClick });
 
   init();
@@ -20,6 +22,10 @@
       !window.__inputTranslateInvalidated &&
       (InputTranslate.extension?.isExtensionContextValid() ?? true)
     );
+  }
+
+  function isExtensionEnabled() {
+    return settings?.enabled !== false;
   }
 
   function notifyReloadNeeded() {
@@ -39,8 +45,28 @@
     return true;
   }
 
-  function init() {
-    if (!isActive() || !contextTools || !runtime || !ui) return;
+  async function init() {
+    if (!isActive() || !contextTools || !runtime || !ui || !settingsApi) return;
+
+    try {
+      settings = await settingsApi.getSettings();
+    } catch (error) {
+      if (handleInvalidatedContext(error)) return;
+      settings = { ...settingsApi.DEFAULT_SETTINGS };
+    }
+
+    settingsApi.subscribe((next) => {
+      settings = next;
+      if (!next.enabled) {
+        hideButton();
+        return;
+      }
+      if (activeContext && contextTools.isTranslatable(activeContext)) {
+        showButton(
+          contextTools.getButtonPosition(activeContext, null, clampToViewport)
+        );
+      }
+    });
 
     InputTranslate.selectionObserver?.create({
       onSelectionChange: syncButtonWithSelection,
@@ -85,12 +111,14 @@
     return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
-  function getButtonDimensions(counter) {
+  function getButtonDimensions(counter, showCounter) {
+    if (!showCounter) return { width: 40, height: 40 };
     return { width: Math.max(44, Math.max(52, counter.length * 6.5) + 12), height: 48 };
   }
 
   function syncButtonWithSelection(event) {
     if (!isActive()) return notifyReloadNeeded();
+    if (!isExtensionEnabled()) return hideButton();
     if (isTranslating || ui.contains(event?.target)) return;
 
     try {
@@ -107,21 +135,33 @@
   }
 
   async function showButton(anchor) {
+    if (!isExtensionEnabled()) return hideButton();
+
     const context = activeContext;
     if (!context) return;
     const selectedChars = context.text.length;
+    const showCounter = settings.showCharCounter !== false;
     const renderVersion = ++buttonRenderVersion;
     const initialCounter = `${formatCount(selectedChars)}/${formatCount(null)}`;
-    ui.setTranslate(selectedChars, null);
-    ui.show(clampToViewport(anchor.x, anchor.y, getButtonDimensions(initialCounter)));
+    ui.setTranslate(selectedChars, null, { showCounter });
+    ui.show(
+      clampToViewport(
+        anchor.x,
+        anchor.y,
+        getButtonDimensions(initialCounter, showCounter)
+      )
+    );
+
+    if (!showCounter) return;
 
     try {
       const remaining = await runtime.getQuotaRemaining();
       if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
+      if (settings.showCharCounter === false) return;
       const counter = `${formatCount(selectedChars)}/${formatCount(remaining ?? '…')}`;
-      ui.setTranslate(selectedChars, remaining);
+      ui.setTranslate(selectedChars, remaining, { showCounter: true });
       ui.updatePosition(
-        clampToViewport(anchor.x, anchor.y, getButtonDimensions(counter))
+        clampToViewport(anchor.x, anchor.y, getButtonDimensions(counter, true))
       );
     } catch (error) {
       if (!handleInvalidatedContext(error)) return;
@@ -137,7 +177,7 @@
 
   async function onHotkeyTranslate() {
     if (!isActive()) return notifyReloadNeeded();
-    if (isTranslating) return;
+    if (!isExtensionEnabled() || isTranslating) return;
 
     const now = Date.now();
     if (now - lastHotkeyAt < 400) return;
@@ -155,6 +195,7 @@
   }
 
   async function onTranslateClick() {
+    if (!isExtensionEnabled()) return;
     if (activeContext && !isTranslating) await translateSelection(activeContext);
   }
 

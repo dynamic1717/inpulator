@@ -53,27 +53,44 @@ replace text (native / editable / clipboard)
 | Файл                    | Назначение                                          |
 | ----------------------- | --------------------------------------------------- |
 | `manifest.json`         | Manifest V3, permissions, content scripts, commands |
+| `settings.js`           | IIFE: чтение/запись `extensionSettings`             |
+| `settings-defaults.js`  | ES-модуль констант настроек для background          |
+| `popup/`                | Окно настроек (лимит, вкл/выкл, счётчик на кнопке)  |
 | `shadow-dom.js`         | Обход shadow boundary, поиск editable от selection  |
 | `field-clipboard.js`    | Clipboard fallback для замены текста                |
 | `field-native.js`       | Логика для `<input>` / `<textarea>`                 |
 | `field-editable.js`     | Логика для `contenteditable`                        |
-| `content.js`            | UI кнопки, события, orchestration                   |
+| `content.js`            | UI кнопки, события, orchestration, гейт настроек    |
 | `selection-context.js`  | Контекст выделения, позиция и замена текста         |
 | `selection-observer.js` | Батчинг событий выделения и viewport                |
 | `runtime-client.js`     | Кэширование quota и обмен сообщениями с background  |
 | `floating-ui.js`        | DOM кнопки и toast                                  |
-| `background.js`         | Relay сообщений и hotkey                            |
+| `background.js`         | Relay сообщений, hotkey, иконка action              |
 | `translation/`          | Контракт провайдера, MyMemory и сервис перевода     |
 | `styles.css`            | Стили кнопки и toast                                |
+| `icons/*-disabled.png`  | Grayscale-иконки при выключенном расширении         |
 
 ### Permissions
 
-| Permission                        | Зачем                              |
-| --------------------------------- | ---------------------------------- |
-| `<all_urls>`                      | Инъекция content script            |
-| `host_permissions` (MyMemory)     | API перевода                       |
-| `clipboardRead`, `clipboardWrite` | Fallback через буфер обмена        |
-| `storage`                         | Локальный счётчик символов за день |
+| Permission                        | Зачем                                      |
+| --------------------------------- | ------------------------------------------ |
+| `<all_urls>`                      | Инъекция content script                    |
+| `host_permissions` (MyMemory)     | API перевода                               |
+| `clipboardRead`, `clipboardWrite` | Fallback через буфер обмена                |
+| `storage`                         | Счётчик символов за день и настройки popup |
+
+## Настройки (`extensionSettings`)
+
+Ключ в `chrome.storage.local`:
+
+```js
+{ enabled: true, showCharCounter: true }
+```
+
+- **enabled** — глобальный вкл/выкл: скрывает кнопку, блокирует hotkey; `chrome.action.setIcon` переключает цветные / grayscale иконки
+- **showCharCounter** — показывать ли `выделено/остаток` на плавающей кнопке
+- Popup: `action.default_popup` → `popup/popup.html`
+- Изменения применяются через `chrome.storage.onChanged` без reload страницы
 
 ## Определение русского текста
 
@@ -206,18 +223,23 @@ input-translate-ext/
 - Clipboard fallback
 - IIFE guards для content scripts
 
-### Фаза 3 ✅ (частично)
+### Фаза 3 ✅
 
 - Локальный quota counter на кнопке
 - Обработка `quotaFinished`
 - `de` email для лимита 50k
 
-### Фаза 4 (опционально)
+### Фаза 4 ✅
+
+- Popup настроек: лимит, вкл/выкл, счётчик на кнопке
+- Grayscale-иконка action при выключении
+
+### Фаза 5 (опционально)
 
 - [ ] Chrome Translator API (offline)
 - [ ] Fallback между API
 - [ ] Blacklist доменов
-- [ ] Popup настроек (email, язык)
+- [ ] Настройки email / направления перевода
 
 ## Установка (dev)
 
