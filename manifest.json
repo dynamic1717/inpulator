@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Input Translate",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Translate selected Russian text to English in input fields",
   "permissions": ["clipboardRead", "clipboardWrite", "storage"],
   "host_permissions": ["https://api.mymemory.translated.net/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "commands": {
     "translate-selection": {
@@ -25,6 +26,7 @@
         "field-clipboard.js",
         "field-native.js",
         "field-editable.js",
+        "floating-ui.js",
         "content.js"
       ],
       "css": ["styles.css"],

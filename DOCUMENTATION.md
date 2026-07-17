@@ -42,7 +42,7 @@ detectSelectionContext()
         ↓
 floating button UI
         ↓
-TRANSLATE / GET_QUOTA msg  →      MyMemory API
+TRANSLATE / GET_QUOTA msg  →      Translation service → MyMemory API
                              ←    перевод + quota
         ↓
 replace text (native / editable / clipboard)
@@ -58,7 +58,8 @@ replace text (native / editable / clipboard)
 | `field-native.js` | Логика для `<input>` / `<textarea>` |
 | `field-editable.js` | Логика для `contenteditable` |
 | `content.js` | UI кнопки, события, orchestration |
-| `background.js` | MyMemory API, quota, hotkey relay |
+| `background.js` | Relay сообщений и hotkey |
+| `translation/` | Контракт провайдера, MyMemory и сервис перевода |
 | `styles.css` | Стили кнопки и toast |
 
 ### Permissions
@@ -89,9 +90,14 @@ replace text (native / editable / clipboard)
 | `de` | email для повышенного лимита (50k chars/day) |
 | Max chunk | 450 символов (API limit ~500 bytes) |
 
-### Quota
+### Провайдеры и quota
 
-- API возвращает `quotaFinished: true` при исчерпании — обрабатывается в `background.js`
+`translation/translation-service.js` даёт content script единый результат
+`{ translatedText, provider, quota }`. Сейчас подключён только `mymemory`;
+Chrome Translator API добавляется отдельным провайдером без изменений UI или
+обработчика сообщений.
+
+- API возвращает `quotaFinished: true` при исчерпании — обрабатывается провайдером MyMemory
 - Точный остаток API **не отдаёт**
 - Локальный счётчик в `chrome.storage.local` (`dailyUsage`: `{ date, charsUsed }`), лимит 50 000/день
 - Счётчик на кнопке: `{selectedLength}/{localRemaining}`
@@ -144,7 +150,7 @@ replace text (native / editable / clipboard)
 - Не активируется на полях паролей
 - Не логирует переводы
 - Текст уходит на MyMemory API
-- Email в `de` параметре — для лимита API, хранится в `background.js`
+- Email в `de` параметре — для лимита API, хранится в провайдере MyMemory
 
 ## Структура проекта
 
@@ -152,10 +158,15 @@ replace text (native / editable / clipboard)
 input-translate-ext/
 ├── manifest.json
 ├── background.js
+├── translation/
+│   ├── provider.js
+│   ├── translation-service.js
+│   └── providers/mymemory-provider.js
 ├── shadow-dom.js
 ├── field-clipboard.js
 ├── field-native.js
 ├── field-editable.js
+├── floating-ui.js
 ├── content.js
 ├── styles.css
 ├── README.md           # описание продукта

@@ -6,14 +6,10 @@
   const InputTranslate = window.InputTranslate || {};
   const CYRILLIC_RE = /[\u0400-\u04FF]/;
 
-  const TRANSLATE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/></svg>`;
-
-  const LOADING_ICON_SVG = `<svg class="input-translate-spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="14 42"/></svg>`;
-
-  let button = null;
-  let toast = null;
   let activeContext = null;
   let isTranslating = false;
+  let buttonRenderVersion = 0;
+  const ui = InputTranslate.floatingUi?.create({ onTranslate: onTranslateClick });
 
   init();
 
@@ -142,12 +138,23 @@
     }
   }
 
+  function isContextCurrent(context) {
+    if (!context?.field?.isConnected && context.type !== 'clipboard') return false;
+
+    if (context.type === 'native') {
+      const { field, meta } = context;
+      return field.value.slice(meta.start, meta.end) === context.text;
+    }
+
+    return context.meta?.range?.toString() === context.text;
+  }
+
   let selectionChangeTimer = null;
 
   function syncButtonWithSelection(event) {
     if (!isActive()) return;
     if (isTranslating) return;
-    if (event?.target && button?.contains(event.target)) return;
+    if (event?.target && ui?.contains(event.target)) return;
 
     try {
       const context = detectSelectionContext();
@@ -169,7 +176,7 @@
       return;
     }
     if (isTranslating) return;
-    if (button?.contains(event.target)) return;
+    if (ui?.contains(event.target)) return;
 
     requestAnimationFrame(() => syncButtonWithSelection(event));
   }
@@ -227,23 +234,6 @@
     };
   }
 
-  function setButtonContent(mode, selectedChars, remaining) {
-    if (!button) return;
-
-    if (mode === 'loading') {
-      button.innerHTML = LOADING_ICON_SVG;
-      button.classList.remove('input-translate-btn--with-counter');
-      return;
-    }
-
-    const counter =
-      remaining != null ? `${selectedChars}/${remaining}` : `${selectedChars}/…`;
-
-    button.classList.add('input-translate-btn--with-counter');
-    button.innerHTML = `${TRANSLATE_ICON_SVG}<span class="input-translate-counter">${counter}</span>`;
-    button.title = `Translate to English (${counter} chars, Alt+Shift+T)`;
-  }
-
   async function fetchQuotaRemaining() {
     try {
       const quota = await chrome.runtime.sendMessage({ type: 'GET_QUOTA' });
@@ -255,34 +245,30 @@
   }
 
   async function showButton(position, selectedChars) {
-    if (!button) {
-      button = document.createElement('button');
-      button.id = 'input-translate-btn';
-      button.type = 'button';
-      button.setAttribute('aria-label', 'Translate to English');
-      button.addEventListener('mousedown', (e) => e.preventDefault());
-      button.addEventListener('click', onTranslateClick);
-      document.documentElement.appendChild(button);
-    }
+    if (!ui) return;
+    const renderVersion = ++buttonRenderVersion;
+    ui.setTranslate(selectedChars, null);
 
-    setButtonContent('translate', selectedChars, null);
-    button.disabled = false;
+    const initialDims = getButtonDimensions(`${selectedChars}/…`);
+    const initialPosition = clampToViewport(position.x, position.y, initialDims);
+    ui.show(initialPosition);
 
     const remaining = await fetchQuotaRemaining();
-    setButtonContent('translate', selectedChars, remaining);
+    if (renderVersion !== buttonRenderVersion || !activeContext) return;
+
+    ui.setTranslate(selectedChars, remaining);
 
     const counterText =
       remaining != null ? `${selectedChars}/${remaining}` : `${selectedChars}/…`;
     const dims = getButtonDimensions(counterText);
     const adjusted = clampToViewport(position.x, position.y, dims);
 
-    button.style.left = `${adjusted.x}px`;
-    button.style.top = `${adjusted.y}px`;
-    button.hidden = false;
+    ui.updatePosition(adjusted);
   }
 
   function hideButton() {
-    if (button) button.hidden = true;
+    buttonRenderVersion += 1;
+    ui?.hide();
     if (!isTranslating) activeContext = null;
   }
 
@@ -297,11 +283,9 @@
     const snapshot = cloneContext(context);
     const selectedChars = snapshot.text.length;
     isTranslating = true;
+    buttonRenderVersion += 1;
 
-    if (button) {
-      button.disabled = true;
-      setButtonContent('loading', selectedChars, null);
-    }
+    ui?.setLoading();
 
     try {
       const response = await chrome.runtime.sendMessage({
@@ -320,17 +304,18 @@
         throw new Error(response.error);
       }
 
+      if (!isContextCurrent(snapshot)) {
+        throw new Error('Selected text changed; select it again');
+      }
+
       await applyTranslation(snapshot, response.translatedText);
       hideButton();
     } catch (error) {
       if (handleInvalidatedContext(error)) return;
       showToast(error.message || 'Translation failed');
-      if (button) {
-        button.disabled = false;
-        fetchQuotaRemaining().then((remaining) => {
-          setButtonContent('translate', selectedChars, remaining);
-        });
-      }
+      fetchQuotaRemaining().then((remaining) => {
+        ui?.setTranslate(selectedChars, remaining);
+      });
     } finally {
       isTranslating = false;
       activeContext = null;
@@ -367,19 +352,7 @@
   }
 
   function showToast(message) {
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'input-translate-toast';
-      document.documentElement.appendChild(toast);
-    }
-
-    toast.textContent = message;
-    toast.hidden = false;
-
-    clearTimeout(showToast._timer);
-    showToast._timer = setTimeout(() => {
-      toast.hidden = true;
-    }, 3000);
+    ui?.showToast(message);
   }
 
   window.__inputTranslateContent = true;

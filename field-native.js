@@ -147,14 +147,29 @@
     const { start, end } = meta;
     const value = field.value;
 
-    field.value = value.slice(0, start) + newText + value.slice(end);
+    const nextValue = value.slice(0, start) + newText + value.slice(end);
+    const prototype = field.tagName === 'TEXTAREA'
+      ? HTMLTextAreaElement.prototype
+      : HTMLInputElement.prototype;
+    const valueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+
+    if (valueSetter) {
+      valueSetter.call(field, nextValue);
+    } else {
+      field.value = nextValue;
+    }
 
     const cursor = start + newText.length;
     field.setSelectionRange(cursor, cursor);
     field.focus();
 
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
+    field.dispatchEvent(
+      new InputEvent('input', {
+        bubbles: true,
+        inputType: 'insertText',
+        data: newText,
+      })
+    );
   }
 
   window.InputTranslate.native = {
