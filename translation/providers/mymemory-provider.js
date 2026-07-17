@@ -5,6 +5,7 @@ const MAX_CHUNK_SIZE = 450;
 const DAILY_CHAR_LIMIT = 50000;
 const STORAGE_KEY = 'dailyUsage';
 const MYMEMORY_EMAIL = 'pamotod102@meikeya.com';
+const REQUEST_TIMEOUT_MS = 15000;
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
@@ -56,6 +57,7 @@ export function splitIntoChunks(text, maxSize = MAX_CHUNK_SIZE) {
 export function createMyMemoryProvider({
   storage = chrome.storage.local,
   fetchImpl = fetch,
+  timeoutMs = REQUEST_TIMEOUT_MS,
 } = {}) {
   let queue = Promise.resolve();
 
@@ -93,7 +95,21 @@ export function createMyMemoryProvider({
     url.searchParams.set('langpair', `${source}|${target}`);
     url.searchParams.set('de', MYMEMORY_EMAIL);
 
-    const response = await fetchImpl(url);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    let response;
+
+    try {
+      response = await fetchImpl(url, { signal: controller.signal });
+    } catch {
+      if (controller.signal.aborted) {
+        throw new Error('Translation request timed out');
+      }
+      throw new Error('Network error');
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();
@@ -108,6 +124,7 @@ export function createMyMemoryProvider({
 
   return {
     id: 'mymemory',
+    isAvailable: async () => true,
     getQuota,
     translate(text, options = DEFAULT_LANGUAGE_PAIR) {
       return serialize(async () => {

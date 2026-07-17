@@ -140,7 +140,6 @@
 
   async function translateSelection(context) {
     const snapshot = contextTools.clone(context);
-    const selectedChars = snapshot.text.length;
     isTranslating = true;
     buttonRenderVersion += 1;
     ui.setLoading();
@@ -154,11 +153,8 @@
       hideButton();
     } catch (error) {
       if (handleInvalidatedContext(error)) return;
+      hideButton();
       ui.showToast(error.message || 'Translation failed');
-      runtime
-        .getQuotaRemaining({ force: true })
-        .then((remaining) => ui.setTranslate(selectedChars, remaining))
-        .catch(() => ui.setTranslate(selectedChars, null));
     } finally {
       isTranslating = false;
       activeContext = null;

@@ -43,3 +43,19 @@ test('provider preserves outer whitespace and serializes quota updates', async (
   assert.equal(second, 'translated');
   assert.equal(record.charsUsed, 7);
 });
+
+test('provider reports a timeout when the request is aborted', async () => {
+  const provider = createMyMemoryProvider({
+    timeoutMs: 0,
+    storage: {
+      get: async () => ({}),
+      set: async () => undefined,
+    },
+    fetchImpl: (_url, { signal }) =>
+      new Promise((_, reject) => {
+        signal.addEventListener('abort', () => reject(new Error('aborted')));
+      }),
+  });
+
+  await assert.rejects(provider.translate('тест'), /timed out/);
+});

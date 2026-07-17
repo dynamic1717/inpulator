@@ -97,8 +97,9 @@ replace text (native / editable / clipboard)
 ### Провайдеры и quota
 
 `translation/translation-service.js` даёт content script единый результат
-`{ translatedText, provider, quota }`. Сейчас подключён только `mymemory`;
-Chrome Translator API добавляется отдельным провайдером без изменений UI или
+`{ translatedText, provider, quota }`. Сервис выбирает первый доступный
+провайдер по `isAvailable()`. Сейчас подключён только `mymemory`; Chrome
+Translator API добавляется отдельным провайдером без изменений UI или
 обработчика сообщений.
 
 - API возвращает `quotaFinished: true` при исчерпании — обрабатывается провайдером MyMemory
