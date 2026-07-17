@@ -27,7 +27,8 @@
 
     function setTranslate(selectedChars, remaining) {
       ensureButton();
-      const counter = remaining != null ? `${selectedChars}/${remaining}` : `${selectedChars}/…`;
+      const counter =
+        remaining != null ? `${selectedChars}/${remaining}` : `${selectedChars}/…`;
       button.classList.add('input-translate-btn--with-counter');
       button.innerHTML = `${TRANSLATE_ICON}<span class="input-translate-counter">${counter}</span>`;
       button.title = `Translate to English (${counter} chars, Alt+Shift+T)`;
@@ -36,6 +37,7 @@
 
     return {
       contains(target) {
+        if (!target) return false;
         return Boolean(button?.contains(target));
       },
       show(position) {

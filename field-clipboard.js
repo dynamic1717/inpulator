@@ -17,12 +17,12 @@
   }
 
   function replaceViaInsertText(newText, range) {
-    restoreSelection(range);
+    if (!restoreSelection(range)) return false;
     return document.execCommand('insertText', false, newText);
   }
 
   async function replaceViaClipboardPaste(newText, range) {
-    restoreSelection(range);
+    if (!restoreSelection(range)) return false;
 
     try {
       await navigator.clipboard.writeText(newText);

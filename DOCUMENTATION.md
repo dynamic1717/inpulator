@@ -50,31 +50,35 @@ replace text (native / editable / clipboard)
 
 ### Компоненты
 
-| Файл | Назначение |
-|------|------------|
-| `manifest.json` | Manifest V3, permissions, content scripts, commands |
-| `shadow-dom.js` | Обход shadow boundary, поиск editable от selection |
-| `field-clipboard.js` | Clipboard fallback для замены текста |
-| `field-native.js` | Логика для `<input>` / `<textarea>` |
-| `field-editable.js` | Логика для `contenteditable` |
-| `content.js` | UI кнопки, события, orchestration |
-| `background.js` | Relay сообщений и hotkey |
-| `translation/` | Контракт провайдера, MyMemory и сервис перевода |
-| `styles.css` | Стили кнопки и toast |
+| Файл                    | Назначение                                          |
+| ----------------------- | --------------------------------------------------- |
+| `manifest.json`         | Manifest V3, permissions, content scripts, commands |
+| `shadow-dom.js`         | Обход shadow boundary, поиск editable от selection  |
+| `field-clipboard.js`    | Clipboard fallback для замены текста                |
+| `field-native.js`       | Логика для `<input>` / `<textarea>`                 |
+| `field-editable.js`     | Логика для `contenteditable`                        |
+| `content.js`            | UI кнопки, события, orchestration                   |
+| `selection-context.js`  | Контекст выделения, позиция и замена текста         |
+| `selection-observer.js` | Батчинг событий выделения и viewport                |
+| `runtime-client.js`     | Кэширование quota и обмен сообщениями с background  |
+| `floating-ui.js`        | DOM кнопки и toast                                  |
+| `background.js`         | Relay сообщений и hotkey                            |
+| `translation/`          | Контракт провайдера, MyMemory и сервис перевода     |
+| `styles.css`            | Стили кнопки и toast                                |
 
 ### Permissions
 
-| Permission | Зачем |
-|------------|-------|
-| `<all_urls>` | Инъекция content script |
-| `host_permissions` (MyMemory) | API перевода |
-| `clipboardRead`, `clipboardWrite` | Fallback через буфер обмена |
-| `storage` | Локальный счётчик символов за день |
+| Permission                        | Зачем                              |
+| --------------------------------- | ---------------------------------- |
+| `<all_urls>`                      | Инъекция content script            |
+| `host_permissions` (MyMemory)     | API перевода                       |
+| `clipboardRead`, `clipboardWrite` | Fallback через буфер обмена        |
+| `storage`                         | Локальный счётчик символов за день |
 
 ## Определение русского текста
 
 ```js
-/[\u0400-\u04FF]/.test(selectedText)
+/[\u0400-\u04FF]/.test(selectedText);
 ```
 
 Не показывать кнопку на `type="password"` и пустых выделениях.
@@ -83,12 +87,12 @@ replace text (native / editable / clipboard)
 
 **Текущая реализация:** [MyMemory](https://mymemory.translated.net/doc/spec.php)
 
-| Параметр | Значение |
-|----------|----------|
-| Endpoint | `GET https://api.mymemory.translated.net/get` |
-| `langpair` | `ru\|en` |
-| `de` | email для повышенного лимита (50k chars/day) |
-| Max chunk | 450 символов (API limit ~500 bytes) |
+| Параметр   | Значение                                      |
+| ---------- | --------------------------------------------- |
+| Endpoint   | `GET https://api.mymemory.translated.net/get` |
+| `langpair` | `ru\|en`                                      |
+| `de`       | email для повышенного лимита (50k chars/day)  |
+| Max chunk  | 450 символов (API limit ~500 bytes)           |
 
 ### Провайдеры и quota
 
@@ -104,27 +108,28 @@ Chrome Translator API добавляется отдельным провайде
 
 ### Альтернативы (не реализованы)
 
-| API | Лимит | Качество |
-|-----|-------|----------|
-| LibreTranslate | ~100k/мес | Среднее |
-| DeepL Free | ~500k/мес | Высокое |
-| Chrome Translator API | On-device | Хорошее |
+| API                   | Лимит     | Качество |
+| --------------------- | --------- | -------- |
+| LibreTranslate        | ~100k/мес | Среднее  |
+| DeepL Free            | ~500k/мес | Высокое  |
+| Chrome Translator API | On-device | Хорошее  |
 
 ## Поддержка типов полей
 
-| Тип поля | Статус | Примечание |
-|----------|--------|------------|
-| `<input>`, `<textarea>` | ✅ | `selectionStart/End`, mirror-div для позиции |
-| `contenteditable` | ✅ | `Range`, `insertText`, `InputEvent` |
-| React/Vue controlled | ✅ | `dispatchEvent('input')` |
-| Shadow DOM (Gmail, ChatGPT) | ✅ | Обход от `selection.anchorNode` через `getRootNode().host` |
-| Cross-origin iframe | ❌ | Content script недоступен |
+| Тип поля                    | Статус | Примечание                                                 |
+| --------------------------- | ------ | ---------------------------------------------------------- |
+| `<input>`, `<textarea>`     | ✅     | `selectionStart/End`, mirror-div для позиции               |
+| `contenteditable`           | ✅     | `Range`, `insertText`, `InputEvent`                        |
+| React/Vue controlled        | ✅     | `dispatchEvent('input')`                                   |
+| Shadow DOM (Gmail, ChatGPT) | ✅     | Обход от `selection.anchorNode` через `getRootNode().host` |
+| Cross-origin iframe         | ❌     | Content script недоступен                                  |
 
 ## Shadow DOM
 
 `chrome.dom.openOrClosedShadowRoot` **не используется** — вызывает `Extension context invalidated` после перезагрузки расширения без refresh вкладки.
 
 Вместо этого:
+
 - Подъём от узла selection через `parentNode` / `DocumentFragment.host`
 - `selectionchange` для синхронизации видимости кнопки
 - Clipboard fallback (`insertText` → `paste`) для сложных редакторов
@@ -167,6 +172,13 @@ input-translate-ext/
 ├── field-native.js
 ├── field-editable.js
 ├── floating-ui.js
+├── selection-context.js
+├── selection-observer.js
+├── runtime-client.js
+├── test/                 # unit-тесты чистой логики
+├── eslint.config.js
+├── .prettierrc.json
+└── package.json
 ├── content.js
 ├── styles.css
 ├── README.md           # описание продукта
@@ -176,26 +188,31 @@ input-translate-ext/
 ## История разработки
 
 ### Фаза 1 ✅
+
 - `input` и `textarea`
 - Плавающая кнопка при кириллице
 - MyMemory API
 - Loading и error states
 
 ### Фаза 2 ✅
+
 - `contenteditable`
 - Hotkey `Alt+Shift+T`
 
 ### Фаза 2.5 ✅
+
 - Shadow boundary traversal от selection
 - Clipboard fallback
 - IIFE guards для content scripts
 
 ### Фаза 3 ✅ (частично)
+
 - Локальный quota counter на кнопке
 - Обработка `quotaFinished`
 - `de` email для лимита 50k
 
 ### Фаза 4 (опционально)
+
 - [ ] Chrome Translator API (offline)
 - [ ] Fallback между API
 - [ ] Blacklist доменов
@@ -213,5 +230,6 @@ input-translate-ext/
 - **JavaScript** (vanilla, без TypeScript и сборки)
 - **Manifest V3**
 - **MyMemory API**
+- **Node test runner**, ESLint и Prettier для локальных проверок
 
 TypeScript и сборка имеют смысл при росте проекта (popup, несколько API, настройки).

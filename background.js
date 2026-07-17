@@ -4,9 +4,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.type === 'GET_QUOTA') {
     getQuota()
       .then(sendResponse)
-      .catch(() =>
-        sendResponse({ charsUsed: 0, dailyLimit: 50000, remaining: 50000 })
-      );
+      .catch(() => sendResponse({ charsUsed: 0, dailyLimit: 50000, remaining: 50000 }));
     return true;
   }
 

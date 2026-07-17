@@ -24,9 +24,7 @@
     if (element.tagName === 'INPUT') {
       const type = (element.type || 'text').toLowerCase();
       return (
-        TRANSLATABLE_INPUT_TYPES.has(type) &&
-        !element.disabled &&
-        !element.readOnly
+        TRANSLATABLE_INPUT_TYPES.has(type) && !element.disabled && !element.readOnly
       );
     }
 
@@ -57,10 +55,7 @@
         Math.max(margin, x - buttonSize / 2),
         window.innerWidth - buttonSize - margin
       ),
-      y: Math.min(
-        Math.max(margin, y),
-        window.innerHeight - buttonSize - margin
-      ),
+      y: Math.min(Math.max(margin, y), window.innerHeight - buttonSize - margin),
     };
   }
 
@@ -148,10 +143,10 @@
     const value = field.value;
 
     const nextValue = value.slice(0, start) + newText + value.slice(end);
-    const prototype = field.tagName === 'TEXTAREA'
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype;
-    const valueSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      Object.getPrototypeOf(field),
+      'value'
+    )?.set;
 
     if (valueSetter) {
       valueSetter.call(field, nextValue);
@@ -163,13 +158,17 @@
     field.setSelectionRange(cursor, cursor);
     field.focus();
 
-    field.dispatchEvent(
-      new InputEvent('input', {
-        bubbles: true,
-        inputType: 'insertText',
-        data: newText,
-      })
-    );
+    try {
+      field.dispatchEvent(
+        new InputEvent('input', {
+          bubbles: true,
+          inputType: 'insertText',
+          data: newText,
+        })
+      );
+    } catch {
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   }
 
   window.InputTranslate.native = {

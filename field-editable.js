@@ -18,11 +18,7 @@
     return;
   }
 
-  const {
-    findEditableFromNode,
-    findEditableNearFocus,
-    isEditableElement,
-  } = shadow;
+  const { findEditableFromNode, findEditableNearFocus, isEditableElement } = shadow;
 
   function isEditableRoot(element) {
     return isEditableElement(element);
@@ -78,10 +74,7 @@
 
     if (rect.width === 0 && rect.height === 0) {
       const fieldRect = context.field.getBoundingClientRect();
-      return clampToViewport(
-        fieldRect.left + fieldRect.width / 2,
-        fieldRect.top - 36
-      );
+      return clampToViewport(fieldRect.left + fieldRect.width / 2, fieldRect.top - 36);
     }
 
     return clampToViewport(rect.left + rect.width / 2, rect.top - 36);
@@ -90,15 +83,18 @@
   function dispatchInputEvent(field, newText) {
     if (!field) return;
 
-    field.dispatchEvent(
-      new InputEvent('input', {
-        bubbles: true,
-        cancelable: true,
-        inputType: 'insertText',
-        data: newText,
-        composed: true,
-      })
-    );
+    try {
+      field.dispatchEvent(
+        new InputEvent('input', {
+          bubbles: true,
+          inputType: 'insertText',
+          data: newText,
+          composed: true,
+        })
+      );
+    } catch {
+      field.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    }
   }
 
   function replaceEditableSelection(context, newText) {
@@ -126,9 +122,11 @@
       } catch {
         return false;
       }
+      dispatchInputEvent(field, newText);
     }
 
-    dispatchInputEvent(field, newText);
+    // execCommand emits its own input event. Dispatching another one causes
+    // duplicate updates in controlled editors.
     return true;
   }
 
@@ -140,15 +138,9 @@
     const clipboard = window.InputTranslate.clipboard;
     if (!clipboard) return false;
 
-    const replaced = await clipboard.replaceSelection(
-      newText,
-      context.meta.range
-    );
+    const replaced = await clipboard.replaceSelection(newText, context.meta.range);
 
-    if (replaced) {
-      dispatchInputEvent(context.field, newText);
-      return true;
-    }
+    if (replaced) return true;
 
     return false;
   }

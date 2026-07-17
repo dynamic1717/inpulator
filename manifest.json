@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Input Translate",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Translate selected Russian text to English in input fields",
   "permissions": ["clipboardRead", "clipboardWrite", "storage"],
   "host_permissions": ["https://api.mymemory.translated.net/*"],
@@ -27,6 +27,9 @@
         "field-native.js",
         "field-editable.js",
         "floating-ui.js",
+        "selection-context.js",
+        "selection-observer.js",
+        "runtime-client.js",
         "content.js"
       ],
       "css": ["styles.css"],

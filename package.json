@@ -1,0 +1,15 @@
+{
+  "name": "input-translate-ext",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"**/*.{js,json,md,css}\""
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
+    "prettier": "^3.0.0"
+  }
+}

@@ -57,10 +57,7 @@
       return true;
     }
 
-    if (
-      element.getAttribute('role') === 'textbox' &&
-      element.isContentEditable
-    ) {
+    if (element.getAttribute('role') === 'textbox' && element.isContentEditable) {
       return true;
     }
 

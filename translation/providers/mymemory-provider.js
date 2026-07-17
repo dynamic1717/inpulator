@@ -13,7 +13,10 @@ function todayKey() {
 function normalizeText(text) {
   const leadingWhitespace = text.match(/^\s*/)?.[0] || '';
   const trailingWhitespace = text.match(/\s*$/)?.[0] || '';
-  const content = text.slice(leadingWhitespace.length, text.length - trailingWhitespace.length);
+  const content = text.slice(
+    leadingWhitespace.length,
+    text.length - trailingWhitespace.length
+  );
 
   if (!content) throw new Error('Empty text');
   return { leadingWhitespace, content, trailingWhitespace };
