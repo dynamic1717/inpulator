@@ -46,34 +46,20 @@
     };
   }
 
-  function clampButtonPosition(x, y) {
-    const margin = 8;
-    const buttonSize = 36;
-
-    return {
-      x: Math.min(
-        Math.max(margin, x - buttonSize / 2),
-        window.innerWidth - buttonSize - margin
-      ),
-      y: Math.min(Math.max(margin, y), window.innerHeight - buttonSize - margin),
-    };
-  }
-
-  function getNativeButtonPosition(context, event, clampToViewport) {
-    const clamp = clampToViewport || clampButtonPosition;
+  function getNativeButtonPosition(context, event) {
     const { field, meta } = context;
-    const coords = getSelectionCoords(field, meta, clamp);
+    const coords = getSelectionStartCoords(field, meta);
     if (coords) return coords;
 
     if (event?.clientX != null && event?.clientY != null) {
-      return clamp(event.clientX, event.clientY - 40);
+      return { x: event.clientX, y: event.clientY };
     }
 
     const rect = field.getBoundingClientRect();
-    return clamp(rect.left + rect.width / 2, rect.top - 8);
+    return { x: rect.left, y: rect.top };
   }
 
-  function getSelectionCoords(field, selection, clamp) {
+  function getSelectionStartCoords(field, selection) {
     if (field.tagName !== 'TEXTAREA' && field.tagName !== 'INPUT') return null;
 
     const div = document.createElement('div');
@@ -116,11 +102,11 @@
       div.style[prop] = style[prop];
     }
 
-    const before = field.value.slice(0, selection.end);
+    const before = field.value.slice(0, selection.start);
     div.textContent = before;
 
     const marker = document.createElement('span');
-    marker.textContent = field.value.slice(selection.end) || '.';
+    marker.textContent = field.value.slice(selection.start) || '.';
     div.appendChild(marker);
 
     document.body.appendChild(div);
@@ -131,10 +117,10 @@
 
     document.body.removeChild(div);
 
-    const x = fieldRect.left + (markerRect.left - divRect.left) - field.scrollLeft;
-    const y = fieldRect.top + (markerRect.top - divRect.top) - field.scrollTop;
-
-    return clamp(x, y - 36);
+    return {
+      x: fieldRect.left + (markerRect.left - divRect.left) - field.scrollLeft,
+      y: fieldRect.top + (markerRect.top - divRect.top) - field.scrollTop,
+    };
   }
 
   function replaceNativeSelection(context, newText) {

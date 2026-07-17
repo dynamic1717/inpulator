@@ -10,6 +10,7 @@
   let renderedContext = null;
   let isTranslating = false;
   let buttonRenderVersion = 0;
+  let lastHotkeyAt = 0;
   const ui = InputTranslate.floatingUi?.create({ onTranslate: onTranslateClick });
 
   init();
@@ -24,7 +25,7 @@
   function notifyReloadNeeded() {
     if (window.__inputTranslateReloadNotified) return;
     window.__inputTranslateReloadNotified = true;
-    ui?.showToast('Reload page to use Input Translate');
+    ui?.showToast('Перезагрузите страницу, чтобы использовать Input Translate');
   }
 
   function handleInvalidatedContext(error) {
@@ -47,6 +48,8 @@
       isIgnoredTarget: (target) => ui.contains(target),
     });
 
+    document.addEventListener('keydown', onHotkeyKeydown, true);
+
     try {
       chrome.runtime.onMessage.addListener((message) => {
         if (message.type === 'TRANSLATE_HOTKEY') onHotkeyTranslate();
@@ -56,19 +59,34 @@
     }
   }
 
+  function onHotkeyKeydown(event) {
+    if (event.code !== 'KeyT' || !event.altKey || !event.shiftKey) return;
+    if (event.ctrlKey || event.metaKey || event.repeat) return;
+    event.preventDefault();
+    event.stopPropagation();
+    onHotkeyTranslate();
+  }
+
+  // Anchor = selection-start top-left. Button sits above-left of that point.
   function clampToViewport(x, y, dimensions = { width: 72, height: 44 }) {
     const margin = 8;
+    const gap = 6;
     return {
-      x: Math.min(
-        Math.max(margin, x - dimensions.width / 2),
-        window.innerWidth - dimensions.width - margin
+      x: Math.min(Math.max(margin, x), window.innerWidth - dimensions.width - margin),
+      y: Math.min(
+        Math.max(margin, y - dimensions.height - gap),
+        window.innerHeight - dimensions.height - margin
       ),
-      y: Math.min(Math.max(margin, y), window.innerHeight - dimensions.height - margin),
     };
   }
 
+  function formatCount(value) {
+    if (value == null || value === '…') return '…';
+    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
   function getButtonDimensions(counter) {
-    return { width: Math.max(44, Math.max(52, counter.length * 6.5) + 12), height: 44 };
+    return { width: Math.max(44, Math.max(52, counter.length * 6.5) + 12), height: 48 };
   }
 
   function syncButtonWithSelection(event) {
@@ -88,24 +106,22 @@
     }
   }
 
-  async function showButton(position) {
+  async function showButton(anchor) {
     const context = activeContext;
     if (!context) return;
     const selectedChars = context.text.length;
     const renderVersion = ++buttonRenderVersion;
-    const initialCounter = `${selectedChars}/…`;
+    const initialCounter = `${formatCount(selectedChars)}/${formatCount(null)}`;
     ui.setTranslate(selectedChars, null);
-    ui.show(
-      clampToViewport(position.x, position.y, getButtonDimensions(initialCounter))
-    );
+    ui.show(clampToViewport(anchor.x, anchor.y, getButtonDimensions(initialCounter)));
 
     try {
       const remaining = await runtime.getQuotaRemaining();
       if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
-      const counter = `${selectedChars}/${remaining ?? '…'}`;
+      const counter = `${formatCount(selectedChars)}/${formatCount(remaining ?? '…')}`;
       ui.setTranslate(selectedChars, remaining);
       ui.updatePosition(
-        clampToViewport(position.x, position.y, getButtonDimensions(counter))
+        clampToViewport(anchor.x, anchor.y, getButtonDimensions(counter))
       );
     } catch (error) {
       if (!handleInvalidatedContext(error)) return;
@@ -122,6 +138,10 @@
   async function onHotkeyTranslate() {
     if (!isActive()) return notifyReloadNeeded();
     if (isTranslating) return;
+
+    const now = Date.now();
+    if (now - lastHotkeyAt < 400) return;
+    lastHotkeyAt = now;
 
     try {
       let context = contextTools.detect();
@@ -147,14 +167,14 @@
     try {
       const response = await runtime.translate(snapshot.text);
       if (!contextTools.isCurrent(snapshot)) {
-        throw new Error('Selected text changed; select it again');
+        throw new Error('Выделенный текст изменился; выделите его снова');
       }
       await contextTools.applyTranslation(snapshot, response.translatedText);
       hideButton();
     } catch (error) {
       if (handleInvalidatedContext(error)) return;
       hideButton();
-      ui.showToast(error.message || 'Translation failed');
+      ui.showToast(error.message || 'Перевод не удался');
     } finally {
       isTranslating = false;
       activeContext = null;

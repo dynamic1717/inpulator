@@ -9,8 +9,10 @@
   if (!shadow) {
     window.InputTranslate.editable = {
       getEditableContext: () => null,
-      getEditableButtonPosition: (_context, clampToViewport) =>
-        clampToViewport(window.innerWidth / 2, window.innerHeight / 2),
+      getEditableButtonPosition: () => ({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      }),
       replaceEditableSelection: () => false,
       replaceEditableSelectionWithFallback: async () => false,
     };
@@ -69,15 +71,16 @@
     return buildEditableContext(range, focusedRoot);
   }
 
-  function getEditableButtonPosition(context, clampToViewport) {
-    const rect = context.meta.range.getBoundingClientRect();
+  function getEditableButtonPosition(context, _clampToViewport) {
+    const rects = context.meta.range.getClientRects();
+    const startRect = rects[0];
 
-    if (rect.width === 0 && rect.height === 0) {
+    if (!startRect || (startRect.width === 0 && startRect.height === 0)) {
       const fieldRect = context.field.getBoundingClientRect();
-      return clampToViewport(fieldRect.left + fieldRect.width / 2, fieldRect.top - 36);
+      return { x: fieldRect.left, y: fieldRect.top };
     }
 
-    return clampToViewport(rect.left + rect.width / 2, rect.top - 36);
+    return { x: startRect.left, y: startRect.top };
   }
 
   function dispatchInputEvent(field, newText) {

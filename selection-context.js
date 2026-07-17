@@ -87,9 +87,9 @@
       );
     }
 
-    const rect = context.meta?.range?.getBoundingClientRect();
-    if (rect) return clampToViewport(rect.left + rect.width / 2, rect.top - 36);
-    return clampToViewport(window.innerWidth / 2, window.innerHeight / 2);
+    const startRect = context.meta?.range?.getClientRects()?.[0];
+    if (startRect) return { x: startRect.left, y: startRect.top };
+    return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
   }
 
   async function applyTranslation(context, text) {

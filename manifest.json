@@ -1,8 +1,21 @@
 {
   "manifest_version": 3,
   "name": "Input Translate",
-  "version": "0.7.0",
-  "description": "Translate selected Russian text to English in input fields",
+  "version": "0.8.0",
+  "description": "Перевод выделенного текста в полях ввода с русского языка на английский.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "Input Translate - Перевод текста",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
   "permissions": ["clipboardRead", "clipboardWrite", "storage"],
   "host_permissions": ["https://api.mymemory.translated.net/*"],
   "background": {
@@ -15,7 +28,7 @@
         "default": "Alt+Shift+T",
         "mac": "Alt+Shift+T"
       },
-      "description": "Translate selected text to English"
+      "description": "Перевести выделенный текст с русского на английский"
     }
   },
   "content_scripts": [
