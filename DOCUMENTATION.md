@@ -27,7 +27,7 @@
 - Направление перевода: **RU → EN** (только)
 - Кнопка показывается только если в выделении есть кириллица
 - Фокус на скорость и удобство
-- Бесплатный API перевода (MyMemory)
+- Бесплатный API перевода (MyMemory) / Google Cloud Translation
 
 ## Архитектура
 
@@ -42,7 +42,7 @@ detectSelectionContext()
         ↓
 floating button UI
         ↓
-TRANSLATE / GET_QUOTA msg  →      Translation service → MyMemory API
+TRANSLATE / GET_QUOTA msg  →      Translation service → Google / MyMemory
                              ←    перевод + quota
         ↓
 replace text (native / editable / clipboard)
@@ -55,7 +55,8 @@ replace text (native / editable / clipboard)
 | `manifest.json`         | Manifest V3, permissions, content scripts, commands |
 | `settings.js`           | IIFE: чтение/запись `extensionSettings`             |
 | `settings-defaults.js`  | ES-модуль констант настроек для background          |
-| `popup/`                | Окно настроек (лимит, вкл/выкл, счётчик на кнопке)  |
+| `env.js`                | Сгенерированные креды (`npm run env`)               |
+| `popup/`                | Окно настроек (лимит, провайдер, вкл/выкл, счётчик) |
 | `shadow-dom.js`         | Обход shadow boundary, поиск editable от selection  |
 | `field-clipboard.js`    | Clipboard fallback для замены текста                |
 | `field-native.js`       | Логика для `<input>` / `<textarea>`                 |
@@ -66,31 +67,47 @@ replace text (native / editable / clipboard)
 | `runtime-client.js`     | Кэширование quota и обмен сообщениями с background  |
 | `floating-ui.js`        | DOM кнопки и toast                                  |
 | `background.js`         | Relay сообщений, hotkey, иконка action              |
-| `translation/`          | Контракт провайдера, MyMemory и сервис перевода     |
+| `translation/`          | Контракт, text-utils, Google/MyMemory, сервис       |
 | `styles.css`            | Стили кнопки и toast                                |
 | `icons/*-disabled.png`  | Grayscale-иконки при выключенном расширении         |
 
 ### Permissions
 
-| Permission                        | Зачем                                      |
-| --------------------------------- | ------------------------------------------ |
-| `<all_urls>`                      | Инъекция content script                    |
-| `host_permissions` (MyMemory)     | API перевода                               |
-| `clipboardRead`, `clipboardWrite` | Fallback через буфер обмена                |
-| `storage`                         | Счётчик символов за день и настройки popup |
+| Permission                        | Зачем                            |
+| --------------------------------- | -------------------------------- |
+| `<all_urls>`                      | Инъекция content script          |
+| `host_permissions` (MyMemory)     | API MyMemory                     |
+| `host_permissions` (Google)       | Cloud Translation API            |
+| `clipboardRead`, `clipboardWrite` | Fallback через буфер обмена      |
+| `storage`                         | Счётчики usage и настройки popup |
 
 ## Настройки (`extensionSettings`)
 
 Ключ в `chrome.storage.local`:
 
 ```js
-{ enabled: true, showCharCounter: true }
+{ enabled: true, showCharCounter: true, provider: 'google' }
 ```
 
 - **enabled** — глобальный вкл/выкл: скрывает кнопку, блокирует hotkey; `chrome.action.setIcon` переключает цветные / grayscale иконки
 - **showCharCounter** — показывать ли `выделено/остаток` на плавающей кнопке
+- **provider** — `google` (default) или `mymemory`
 - Popup: `action.default_popup` → `popup/popup.html`
 - Изменения применяются через `chrome.storage.onChanged` без reload страницы
+
+## Креды (env)
+
+```bash
+cp .env.example .env   # заполнить ключи
+npm run env            # → env.js
+```
+
+| Переменная                 | Назначение                        |
+| -------------------------- | --------------------------------- |
+| `GOOGLE_TRANSLATE_API_KEY` | Cloud Translation API v2          |
+| `MYMEMORY_EMAIL`           | Параметр `de` для лимита MyMemory |
+
+`.env` и `env.js` в `.gitignore`.
 
 ## Определение русского текста
 
@@ -102,27 +119,34 @@ replace text (native / editable / clipboard)
 
 ## API перевода
 
-**Текущая реализация:** [MyMemory](https://mymemory.translated.net/doc/spec.php)
+### Google Cloud Translation (default)
+
+| Параметр  | Значение                                                        |
+| --------- | --------------------------------------------------------------- |
+| Endpoint  | `POST https://translation.googleapis.com/language/translate/v2` |
+| Auth      | `key` query param                                               |
+| Languages | `source=ru`, `target=en`, `format=text`                         |
+| Max chunk | ~4000 символов                                                  |
+| Quota     | Локально 500 000 / календарный месяц (`googleMonthlyUsage`)     |
+
+### MyMemory
 
 | Параметр   | Значение                                      |
 | ---------- | --------------------------------------------- |
 | Endpoint   | `GET https://api.mymemory.translated.net/get` |
 | `langpair` | `ru\|en`                                      |
-| `de`       | email для повышенного лимита (50k chars/day)  |
-| Max chunk  | 450 символов (API limit ~500 bytes)           |
+| `de`       | email из env                                  |
+| Max chunk  | 450 символов                                  |
+| Quota      | Локально 50 000 / день (`dailyUsage`)         |
 
-### Провайдеры и quota
+### Выбор провайдера и fallback
 
-`translation/translation-service.js` даёт content script единый результат
-`{ translatedText, provider, quota }`. Сервис выбирает первый доступный
-провайдер по `isAvailable()`. Сейчас подключён только `mymemory`; Chrome
-Translator API добавляется отдельным провайдером без изменений UI или
-обработчика сообщений.
+`translation/translation-service.js` читает `settings.provider`.
 
-- API возвращает `quotaFinished: true` при исчерпании — обрабатывается провайдером MyMemory
-- Точный остаток API **не отдаёт**
-- Локальный счётчик в `chrome.storage.local` (`dailyUsage`: `{ date, charsUsed }`), лимит 50 000/день
-- Счётчик на кнопке: `{selectedLength}/{localRemaining}`
+- `getQuota` — всегда quota выбранного провайдера
+- `translate` при `google`: если локальный `remaining` меньше длины текста → MyMemory (настройка `provider` не меняется)
+- Ошибки сети/ключа Google **не** маскируются fallback’ом
+- Ответ: `{ translatedText, provider, quota }` — `provider` = фактический движок
 
 ### Альтернативы (не реализованы)
 
@@ -172,8 +196,8 @@ Translator API добавляется отдельным провайдером 
 
 - Не активируется на полях паролей
 - Не логирует переводы
-- Текст уходит на MyMemory API
-- Email в `de` параметре — для лимита API, хранится в провайдере MyMemory
+- Текст уходит на Google Cloud Translation и/или MyMemory
+- Креды только в `.env` / `env.js` (не коммитятся)
 
 ## Структура проекта
 
@@ -181,26 +205,24 @@ Translator API добавляется отдельным провайдером 
 input-translate-ext/
 ├── manifest.json
 ├── background.js
+├── env.js                 # generated, gitignored
+├── .env.example
+├── settings.js
+├── settings-defaults.js
 ├── translation/
 │   ├── provider.js
+│   ├── text-utils.js
 │   ├── translation-service.js
-│   └── providers/mymemory-provider.js
-├── shadow-dom.js
-├── field-clipboard.js
-├── field-native.js
-├── field-editable.js
-├── floating-ui.js
-├── selection-context.js
-├── selection-observer.js
-├── runtime-client.js
-├── test/                 # unit-тесты чистой логики
-├── eslint.config.js
-├── .prettierrc.json
-└── package.json
+│   └── providers/
+│       ├── google-provider.js
+│       └── mymemory-provider.js
+├── popup/
+├── scripts/generate-env.mjs
+├── test/
 ├── content.js
 ├── styles.css
-├── README.md           # описание продукта
-└── DOCUMENTATION.md    # этот файл
+├── README.md
+└── DOCUMENTATION.md
 ```
 
 ## История разработки
@@ -234,25 +256,33 @@ input-translate-ext/
 - Popup настроек: лимит, вкл/выкл, счётчик на кнопке
 - Grayscale-иконка action при выключении
 
-### Фаза 5 (опционально)
+### Фаза 5 ✅
+
+- Google Cloud Translation API (default)
+- Выбор провайдера в popup
+- Fallback Google→MyMemory при исчерпании локального лимита
+- Креды через `.env` → `npm run env`
+
+### Фаза 6 (опционально)
 
 - [ ] Chrome Translator API (offline)
-- [ ] Fallback между API
 - [ ] Blacklist доменов
-- [ ] Настройки email / направления перевода
+- [ ] Настройки направления перевода
 
 ## Установка (dev)
 
 1. Клонировать репозиторий
-2. `chrome://extensions` → Режим разработчика
-3. «Загрузить распакованное расширение» → папка проекта
-4. После каждого обновления кода — refresh расширения + **F5 на вкладках**
+2. `cp .env.example .env` и заполнить ключи
+3. `npm install && npm run env`
+4. `chrome://extensions` → Режим разработчика
+5. «Загрузить распакованное расширение» → папка проекта
+6. После каждого обновления кода — refresh расширения + **F5 на вкладках**
+7. После смены `.env` — снова `npm run env` + refresh расширения
 
 ## Стек
 
-- **JavaScript** (vanilla, без TypeScript и сборки)
+- **JavaScript** (vanilla, без TypeScript и полной сборки)
 - **Manifest V3**
-- **MyMemory API**
+- **Google Cloud Translation API** + **MyMemory API**
 - **Node test runner**, ESLint и Prettier для локальных проверок
-
-TypeScript и сборка имеют смысл при росте проекта (popup, несколько API, настройки).
+- Генерация `env.js` через `npm run env`

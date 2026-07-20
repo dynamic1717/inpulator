@@ -9,12 +9,14 @@
   const DEFAULT_SETTINGS = {
     enabled: true,
     showCharCounter: true,
+    provider: 'google',
   };
 
   function normalizeSettings(raw) {
     return {
       enabled: raw?.enabled !== false,
       showCharCounter: raw?.showCharCounter !== false,
+      provider: raw?.provider === 'mymemory' ? 'mymemory' : 'google',
     };
   }
 

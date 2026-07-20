@@ -16,6 +16,11 @@
     return response;
   }
 
+  function invalidateQuotaCache() {
+    quotaCache = null;
+    quotaCacheExpiresAt = 0;
+  }
+
   async function getQuotaRemaining({ force = false } = {}) {
     if (!force && quotaCache && Date.now() < quotaCacheExpiresAt) {
       return quotaCache.remaining;
@@ -34,6 +39,10 @@
     return response;
   }
 
-  window.InputTranslate.runtimeClient = { getQuotaRemaining, translate };
+  window.InputTranslate.runtimeClient = {
+    getQuotaRemaining,
+    invalidateQuotaCache,
+    translate,
+  };
   window.__inputTranslateRuntimeClient = true;
 })();

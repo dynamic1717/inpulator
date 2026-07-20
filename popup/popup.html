@@ -21,7 +21,7 @@
 
       <section class="popup__section" aria-labelledby="quota-label">
         <div class="popup__row">
-          <span id="quota-label" class="popup__label">Лимит за день</span>
+          <span id="quota-label" class="popup__label">Лимит</span>
           <span id="quota-value" class="popup__value">… / …</span>
         </div>
         <div class="popup__meter" aria-hidden="true">
@@ -30,6 +30,19 @@
       </section>
 
       <section class="popup__section">
+        <label class="popup__field" for="provider-select">
+          <span class="popup__toggle-text">
+            <span class="popup__label">Провайдер</span>
+            <span id="provider-hint" class="popup__hint"
+              >При исчерпании лимита — MyMemory</span
+            >
+          </span>
+          <select id="provider-select" class="popup__select">
+            <option value="google">Google Translate</option>
+            <option value="mymemory">MyMemory</option>
+          </select>
+        </label>
+
         <label class="popup__toggle">
           <span class="popup__toggle-text">
             <span class="popup__label">Расширение</span>

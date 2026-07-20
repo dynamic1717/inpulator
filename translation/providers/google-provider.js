@@ -1,23 +1,21 @@
 import { DEFAULT_LANGUAGE_PAIR } from '../provider.js';
 import { normalizeText, splitIntoChunks } from '../text-utils.js';
 
-const API_URL = 'https://api.mymemory.translated.net/get';
-const MAX_CHUNK_SIZE = 450;
-const DAILY_CHAR_LIMIT = 50000;
-const STORAGE_KEY = 'dailyUsage';
+const API_URL = 'https://translation.googleapis.com/language/translate/v2';
+const MAX_CHUNK_SIZE = 4000;
+const MONTHLY_CHAR_LIMIT = 500000;
+const STORAGE_KEY = 'googleMonthlyUsage';
 const REQUEST_TIMEOUT_MS = 15000;
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+function monthKey() {
+  return new Date().toISOString().slice(0, 7);
 }
 
-export { splitIntoChunks } from '../text-utils.js';
-
-export function createMyMemoryProvider({
+export function createGoogleProvider({
   storage,
   fetchImpl = fetch,
   timeoutMs = REQUEST_TIMEOUT_MS,
-  email = '',
+  apiKey = '',
 } = {}) {
   const store = storage ?? chrome.storage.local;
   let queue = Promise.resolve();
@@ -29,21 +27,21 @@ export function createMyMemoryProvider({
   }
 
   async function getUsageRecord() {
-    const today = todayKey();
+    const month = monthKey();
     const data = await store.get(STORAGE_KEY);
     const record = data[STORAGE_KEY];
-    return record?.date === today ? record : { date: today, charsUsed: 0 };
+    return record?.month === month ? record : { month, charsUsed: 0 };
   }
 
   async function getQuota() {
     const record = await getUsageRecord();
     return {
       charsUsed: record.charsUsed,
-      limit: DAILY_CHAR_LIMIT,
-      dailyLimit: DAILY_CHAR_LIMIT,
-      remaining: Math.max(0, DAILY_CHAR_LIMIT - record.charsUsed),
-      period: 'day',
-      provider: 'mymemory',
+      limit: MONTHLY_CHAR_LIMIT,
+      dailyLimit: MONTHLY_CHAR_LIMIT,
+      remaining: Math.max(0, MONTHLY_CHAR_LIMIT - record.charsUsed),
+      period: 'month',
+      provider: 'google',
     };
   }
 
@@ -55,16 +53,24 @@ export function createMyMemoryProvider({
 
   async function fetchChunk(text, { source, target }) {
     const url = new URL(API_URL);
-    url.searchParams.set('q', text);
-    url.searchParams.set('langpair', `${source}|${target}`);
-    if (email) url.searchParams.set('de', email);
+    url.searchParams.set('key', apiKey);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     let response;
 
     try {
-      response = await fetchImpl(url, { signal: controller.signal });
+      response = await fetchImpl(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q: text,
+          source,
+          target,
+          format: 'text',
+        }),
+        signal: controller.signal,
+      });
     } catch {
       if (controller.signal.aborted) {
         throw new Error('Translation request timed out');
@@ -74,24 +80,30 @@ export function createMyMemoryProvider({
       clearTimeout(timeoutId);
     }
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message =
+        data?.error?.message || `Google Translate API error: ${response.status}`;
+      throw new Error(message);
+    }
 
-    const data = await response.json();
-    if (data.quotaFinished || data.responseStatus === 429) {
-      throw new Error('Daily translation limit exceeded');
-    }
-    if (data.responseStatus !== 200 || !data.responseData?.translatedText) {
-      throw new Error(data.responseDetails || 'Translation failed');
-    }
-    return data.responseData.translatedText;
+    const translated = data?.data?.translations?.[0]?.translatedText;
+    if (!translated) throw new Error('Translation failed');
+    return translated;
   }
 
   return {
-    id: 'mymemory',
-    isAvailable: async () => true,
+    id: 'google',
+    isAvailable: async () => Boolean(apiKey),
     getQuota,
     translate(text, options = DEFAULT_LANGUAGE_PAIR) {
       return serialize(async () => {
+        if (!apiKey) {
+          throw new Error(
+            'Google API key missing. Add GOOGLE_TRANSLATE_API_KEY to .env and run npm run env'
+          );
+        }
+
         const { leadingWhitespace, content, trailingWhitespace } = normalizeText(text);
         const quota = await getQuota();
         if (content.length > quota.remaining) {

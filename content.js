@@ -56,7 +56,9 @@
     }
 
     settingsApi.subscribe((next) => {
+      const providerChanged = next.provider !== settings.provider;
       settings = next;
+      if (providerChanged) runtime.invalidateQuotaCache?.();
       if (!next.enabled) {
         hideButton();
         return;
