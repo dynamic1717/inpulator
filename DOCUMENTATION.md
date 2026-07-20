@@ -57,6 +57,8 @@ replace text (native / editable / clipboard)
 | `settings-defaults.js`  | ES-модуль констант настроек для background          |
 | `env.js`                | Сгенерированные креды (`npm run env`)               |
 | `popup/`                | Окно настроек (лимит, провайдер, вкл/выкл, счётчик) |
+| `offscreen/`            | Host для Chrome Translator API                      |
+| `offscreen-manager.js`  | Создание offscreen document и messaging             |
 | `shadow-dom.js`         | Обход shadow boundary, поиск editable от selection  |
 | `field-clipboard.js`    | Clipboard fallback для замены текста                |
 | `field-native.js`       | Логика для `<input>` / `<textarea>`                 |
@@ -80,18 +82,19 @@ replace text (native / editable / clipboard)
 | `host_permissions` (Google)       | Cloud Translation API            |
 | `clipboardRead`, `clipboardWrite` | Fallback через буфер обмена      |
 | `storage`                         | Счётчики usage и настройки popup |
+| `offscreen`                       | On-device Chrome Translator API  |
 
 ## Настройки (`extensionSettings`)
 
 Ключ в `chrome.storage.local`:
 
 ```js
-{ enabled: true, showCharCounter: true, provider: 'google' }
+{ enabled: true, showCharCounter: true, provider: 'chrome' }
 ```
 
 - **enabled** — глобальный вкл/выкл: скрывает кнопку, блокирует hotkey; `chrome.action.setIcon` переключает цветные / grayscale иконки
 - **showCharCounter** — показывать ли `выделено/остаток` на плавающей кнопке
-- **provider** — `google` (default) или `mymemory`
+- **provider** — `chrome` (default), `google` или `mymemory`
 - Popup: `action.default_popup` → `popup/popup.html`
 - Изменения применяются через `chrome.storage.onChanged` без reload страницы
 
@@ -119,7 +122,18 @@ npm run env            # → env.js
 
 ## API перевода
 
-### Google Cloud Translation (default)
+### Chrome Translator API (default)
+
+On-device через offscreen document (`offscreen/offscreen.js`). Service worker вызывает `Translator` только через messaging.
+
+| Параметр   | Значение                                        |
+| ---------- | ----------------------------------------------- |
+| API        | `Translator.availability` / `Translator.create` |
+| Languages  | `sourceLanguage=ru`, `targetLanguage=en`        |
+| Quota      | Нет локального лимита (`period: 'none'`)        |
+| Требования | Chrome 138+ desktop; permission `offscreen`     |
+
+### Google Cloud Translation
 
 | Параметр  | Значение                                                        |
 | --------- | --------------------------------------------------------------- |
@@ -144,17 +158,18 @@ npm run env            # → env.js
 `translation/translation-service.js` читает `settings.provider`.
 
 - `getQuota` — всегда quota выбранного провайдера
-- `translate` при `google`: если локальный `remaining` меньше длины текста → MyMemory (настройка `provider` не меняется)
-- Ошибки сети/ключа Google **не** маскируются fallback’ом
+- `translate` при `chrome`: если unavailable → Google (если ключ и quota) → MyMemory
+- `translate` при `google`: если локальный `remaining` меньше длины текста → MyMemory
+- `translate` при `mymemory`: только MyMemory
+- Ошибки сети/ключа Google **не** маскируются fallback’ом (только quota / chrome unavailable)
 - Ответ: `{ translatedText, provider, quota }` — `provider` = фактический движок
 
 ### Альтернативы (не реализованы)
 
-| API                   | Лимит     | Качество |
-| --------------------- | --------- | -------- |
-| LibreTranslate        | ~100k/мес | Среднее  |
-| DeepL Free            | ~500k/мес | Высокое  |
-| Chrome Translator API | On-device | Хорошее  |
+| API            | Лимит     | Качество |
+| -------------- | --------- | -------- |
+| LibreTranslate | ~100k/мес | Среднее  |
+| DeepL Free     | ~500k/мес | Высокое  |
 
 ## Поддержка типов полей
 
@@ -209,11 +224,16 @@ input-translate-ext/
 ├── .env.example
 ├── settings.js
 ├── settings-defaults.js
+├── offscreen/
+│   ├── offscreen.html
+│   └── offscreen.js
+├── offscreen-manager.js
 ├── translation/
 │   ├── provider.js
 │   ├── text-utils.js
 │   ├── translation-service.js
 │   └── providers/
+│       ├── chrome-provider.js
 │       ├── google-provider.js
 │       └── mymemory-provider.js
 ├── popup/
@@ -258,14 +278,19 @@ input-translate-ext/
 
 ### Фаза 5 ✅
 
-- Google Cloud Translation API (default)
+- Google Cloud Translation API
 - Выбор провайдера в popup
 - Fallback Google→MyMemory при исчерпании локального лимита
 - Креды через `.env` → `npm run env`
 
-### Фаза 6 (опционально)
+### Фаза 6 ✅
 
-- [ ] Chrome Translator API (offline)
+- Chrome Translator API (on-device) как default
+- Offscreen document + permission `offscreen`
+- Fallback Chrome → Google → MyMemory
+
+### Фаза 7 (опционально)
+
 - [ ] Blacklist доменов
 - [ ] Настройки направления перевода
 
@@ -283,6 +308,6 @@ input-translate-ext/
 
 - **JavaScript** (vanilla, без TypeScript и полной сборки)
 - **Manifest V3**
-- **Google Cloud Translation API** + **MyMemory API**
+- **Google Cloud Translation API** + **MyMemory API** + **Chrome Translator API**
 - **Node test runner**, ESLint и Prettier для локальных проверок
 - Генерация `env.js` через `npm run env`

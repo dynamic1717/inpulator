@@ -3,68 +3,41 @@ import test from 'node:test';
 
 import { createTranslationService } from '../translation/translation-service.js';
 
-test('service uses selected mymemory provider', async () => {
-  const google = {
-    id: 'google',
-    isAvailable: async () => true,
-    translate: async () => 'from-google',
+function makeProviders({
+  chromeAvailable = true,
+  googleAvailable = true,
+  googleRemaining = 500000,
+} = {}) {
+  let chromeCalls = 0;
+  let googleCalls = 0;
+  let mymemoryCalls = 0;
+
+  const chrome = {
+    id: 'chrome',
+    isAvailable: async () => chromeAvailable,
+    translate: async () => {
+      chromeCalls += 1;
+      return 'from-chrome';
+    },
     getQuota: async () => ({
       charsUsed: 0,
-      limit: 500000,
-      remaining: 500000,
-      period: 'month',
-      provider: 'google',
+      limit: null,
+      remaining: null,
+      period: 'none',
+      provider: 'chrome',
     }),
   };
-  const mymemory = {
-    id: 'mymemory',
-    isAvailable: async () => true,
-    translate: async () => 'from-mymemory',
-    getQuota: async () => ({
-      charsUsed: 1,
-      limit: 50000,
-      remaining: 49999,
-      period: 'day',
-      provider: 'mymemory',
-    }),
-  };
-  const service = createTranslationService({
-    providers: [google, mymemory],
-    getSettings: async () => ({
-      enabled: true,
-      showCharCounter: true,
-      provider: 'mymemory',
-    }),
-  });
-
-  assert.deepEqual(await service.translate('тест'), {
-    translatedText: 'from-mymemory',
-    provider: 'mymemory',
-    quota: {
-      charsUsed: 1,
-      limit: 50000,
-      remaining: 49999,
-      period: 'day',
-      provider: 'mymemory',
-    },
-  });
-});
-
-test('service falls back to mymemory when google quota is exhausted', async () => {
-  let googleTranslateCalls = 0;
-  let mymemoryTranslateCalls = 0;
-
   const google = {
     id: 'google',
-    isAvailable: async () => true,
+    isAvailable: async () => googleAvailable,
     translate: async () => {
-      googleTranslateCalls += 1;
+      googleCalls += 1;
       return 'from-google';
     },
     getQuota: async () => ({
-      charsUsed: 500000,
+      charsUsed: 500000 - googleRemaining,
       limit: 500000,
-      remaining: 0,
+      remaining: googleRemaining,
       period: 'month',
       provider: 'google',
     }),
@@ -73,7 +46,7 @@ test('service falls back to mymemory when google quota is exhausted', async () =
     id: 'mymemory',
     isAvailable: async () => true,
     translate: async () => {
-      mymemoryTranslateCalls += 1;
+      mymemoryCalls += 1;
       return 'from-mymemory';
     },
     getQuota: async () => ({
@@ -84,8 +57,87 @@ test('service falls back to mymemory when google quota is exhausted', async () =
       provider: 'mymemory',
     }),
   };
+
+  return {
+    providers: [chrome, google, mymemory],
+    counts: () => ({ chromeCalls, googleCalls, mymemoryCalls }),
+  };
+}
+
+test('service uses selected mymemory provider', async () => {
+  const { providers } = makeProviders();
   const service = createTranslationService({
-    providers: [google, mymemory],
+    providers,
+    getSettings: async () => ({
+      enabled: true,
+      showCharCounter: true,
+      provider: 'mymemory',
+    }),
+  });
+
+  const result = await service.translate('тест');
+  assert.equal(result.translatedText, 'from-mymemory');
+  assert.equal(result.provider, 'mymemory');
+});
+
+test('service uses chrome when selected and available', async () => {
+  const { providers, counts } = makeProviders({ chromeAvailable: true });
+  const service = createTranslationService({
+    providers,
+    getSettings: async () => ({
+      enabled: true,
+      showCharCounter: true,
+      provider: 'chrome',
+    }),
+  });
+
+  const result = await service.translate('тест');
+  assert.equal(result.translatedText, 'from-chrome');
+  assert.equal(result.provider, 'chrome');
+  assert.deepEqual(counts(), { chromeCalls: 1, googleCalls: 0, mymemoryCalls: 0 });
+});
+
+test('service falls back to google when chrome is unavailable', async () => {
+  const { providers, counts } = makeProviders({ chromeAvailable: false });
+  const service = createTranslationService({
+    providers,
+    getSettings: async () => ({
+      enabled: true,
+      showCharCounter: true,
+      provider: 'chrome',
+    }),
+  });
+
+  const result = await service.translate('тест');
+  assert.equal(result.translatedText, 'from-google');
+  assert.equal(result.provider, 'google');
+  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 1, mymemoryCalls: 0 });
+});
+
+test('service falls back to mymemory when chrome unavailable and google quota exhausted', async () => {
+  const { providers, counts } = makeProviders({
+    chromeAvailable: false,
+    googleRemaining: 0,
+  });
+  const service = createTranslationService({
+    providers,
+    getSettings: async () => ({
+      enabled: true,
+      showCharCounter: true,
+      provider: 'chrome',
+    }),
+  });
+
+  const result = await service.translate('тест');
+  assert.equal(result.translatedText, 'from-mymemory');
+  assert.equal(result.provider, 'mymemory');
+  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 0, mymemoryCalls: 1 });
+});
+
+test('service falls back to mymemory when google quota is exhausted', async () => {
+  const { providers, counts } = makeProviders({ googleRemaining: 0 });
+  const service = createTranslationService({
+    providers,
     getSettings: async () => ({
       enabled: true,
       showCharCounter: true,
@@ -96,37 +148,13 @@ test('service falls back to mymemory when google quota is exhausted', async () =
   const result = await service.translate('тест');
   assert.equal(result.translatedText, 'from-mymemory');
   assert.equal(result.provider, 'mymemory');
-  assert.equal(googleTranslateCalls, 0);
-  assert.equal(mymemoryTranslateCalls, 1);
+  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 0, mymemoryCalls: 1 });
 });
 
 test('service errors when google is selected without api key', async () => {
-  const google = {
-    id: 'google',
-    isAvailable: async () => false,
-    translate: async () => 'from-google',
-    getQuota: async () => ({
-      charsUsed: 0,
-      limit: 500000,
-      remaining: 500000,
-      period: 'month',
-      provider: 'google',
-    }),
-  };
-  const mymemory = {
-    id: 'mymemory',
-    isAvailable: async () => true,
-    translate: async () => 'from-mymemory',
-    getQuota: async () => ({
-      charsUsed: 0,
-      limit: 50000,
-      remaining: 50000,
-      period: 'day',
-      provider: 'mymemory',
-    }),
-  };
+  const { providers } = makeProviders({ googleAvailable: false });
   const service = createTranslationService({
-    providers: [google, mymemory],
+    providers,
     getSettings: async () => ({
       enabled: true,
       showCharCounter: true,

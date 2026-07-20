@@ -1,4 +1,5 @@
 import { getQuota, translate } from './translation/translation-service.js';
+import { sendToOffscreen } from './offscreen-manager.js';
 import {
   DEFAULT_SETTINGS,
   SETTINGS_KEY,
@@ -58,17 +59,58 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
 syncActionFromSettings();
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message.type === 'CHROME_MODEL_STATUS' && message.status) {
+    // Broadcast from offscreen — popup may listen; no response needed.
+    return;
+  }
+
+  if (message.type === 'GET_CHROME_MODEL_STATUS') {
+    sendToOffscreen({
+      type: 'OFFSCREEN_MODEL_STATUS',
+      sourceLanguage: 'ru',
+      targetLanguage: 'en',
+    })
+      .then((response) => sendResponse(response?.status || response))
+      .catch((error) =>
+        sendResponse({
+          availability: 'unsupported',
+          downloading: false,
+          progress: 0,
+          error: error.message || 'Status check failed',
+        })
+      );
+    return true;
+  }
+
+  if (message.type === 'ENSURE_CHROME_MODEL') {
+    sendToOffscreen({
+      type: 'OFFSCREEN_ENSURE_MODEL',
+      sourceLanguage: 'ru',
+      targetLanguage: 'en',
+    })
+      .then((response) => sendResponse(response?.status || response))
+      .catch((error) =>
+        sendResponse({
+          availability: 'unsupported',
+          downloading: false,
+          progress: 0,
+          error: error.message || 'Model download failed',
+        })
+      );
+    return true;
+  }
+
   if (message.type === 'GET_QUOTA') {
     getQuota()
       .then(sendResponse)
       .catch(() =>
         sendResponse({
           charsUsed: 0,
-          limit: 500000,
-          dailyLimit: 500000,
-          remaining: 500000,
-          period: 'month',
-          provider: 'google',
+          limit: null,
+          dailyLimit: null,
+          remaining: null,
+          period: 'none',
+          provider: 'chrome',
         })
       );
     return true;

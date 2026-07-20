@@ -50,7 +50,8 @@
   const LOADING_ICON = `<svg class="input-translate-spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="14 42"/></svg>`;
 
   function formatCount(value) {
-    if (value == null || value === '…') return '…';
+    if (value === '…') return '…';
+    if (value == null) return '∞';
     return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 

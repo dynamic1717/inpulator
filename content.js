@@ -109,7 +109,8 @@
   }
 
   function formatCount(value) {
-    if (value == null || value === '…') return '…';
+    if (value === '…') return '…';
+    if (value == null) return '∞';
     return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
@@ -144,8 +145,8 @@
     const selectedChars = context.text.length;
     const showCounter = settings.showCharCounter !== false;
     const renderVersion = ++buttonRenderVersion;
-    const initialCounter = `${formatCount(selectedChars)}/${formatCount(null)}`;
-    ui.setTranslate(selectedChars, null, { showCounter });
+    const initialCounter = `${formatCount(selectedChars)}/${formatCount('…')}`;
+    ui.setTranslate(selectedChars, '…', { showCounter });
     ui.show(
       clampToViewport(
         anchor.x,
@@ -160,7 +161,7 @@
       const remaining = await runtime.getQuotaRemaining();
       if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
       if (settings.showCharCounter === false) return;
-      const counter = `${formatCount(selectedChars)}/${formatCount(remaining ?? '…')}`;
+      const counter = `${formatCount(selectedChars)}/${formatCount(remaining)}`;
       ui.setTranslate(selectedChars, remaining, { showCounter: true });
       ui.updatePosition(
         clampToViewport(anchor.x, anchor.y, getButtonDimensions(counter, true))

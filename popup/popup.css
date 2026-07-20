@@ -141,6 +141,40 @@ body {
   outline-offset: 2px;
 }
 
+.popup__model {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.popup__model[hidden] {
+  display: none;
+}
+
+.popup__button {
+  appearance: none;
+  margin: 0;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.popup__button:hover:not(:disabled) {
+  background: #2f5fd6;
+}
+
+.popup__button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
 .popup__toggle input {
   appearance: none;
   width: 40px;

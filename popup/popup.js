@@ -9,22 +9,155 @@
   const quotaLabel = document.getElementById('quota-label');
   const quotaValue = document.getElementById('quota-value');
   const quotaBar = document.getElementById('quota-bar');
+  const quotaMeter = quotaBar.parentElement;
+  const chromeModel = document.getElementById('chrome-model');
+  const chromeModelValue = document.getElementById('chrome-model-value');
+  const chromeModelMeter = document.getElementById('chrome-model-meter');
+  const chromeModelBar = document.getElementById('chrome-model-bar');
+  const chromeModelHint = document.getElementById('chrome-model-hint');
+  const chromeModelDownload = document.getElementById('chrome-model-download');
+
+  const PROVIDER_HINTS = {
+    chrome:
+      'On-device, без ключа и лимита API. Приватно и офлайн после скачивания пакетов.',
+    google:
+      'Лучшее качество перевода, до 500 000 символов/мес. Нужны API key и интернет; текст уходит в Google.',
+    mymemory:
+      'Среднее качество перевода, до 50 000 символов/день. Запасной вариант; текст уходит на внешний сервис.',
+  };
+
+  function applyProviderHint(provider) {
+    providerHint.hidden = false;
+    providerHint.textContent = PROVIDER_HINTS[provider] || PROVIDER_HINTS.chrome;
+  }
+
+  let modelPollTimer = null;
 
   function formatCount(value) {
     if (value == null) return '…';
     return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
+  function stopModelPoll() {
+    if (modelPollTimer != null) {
+      clearInterval(modelPollTimer);
+      modelPollTimer = null;
+    }
+  }
+
+  function startModelPoll() {
+    if (modelPollTimer != null) return;
+    modelPollTimer = setInterval(() => {
+      loadChromeModelStatus({ silent: true });
+    }, 500);
+  }
+
+  function applyChromeModelStatus(status) {
+    if (!status) {
+      chromeModelValue.textContent = '…';
+      chromeModelMeter.hidden = true;
+      chromeModelDownload.hidden = true;
+      chromeModelHint.hidden = true;
+      stopModelPoll();
+      return;
+    }
+
+    const percent = Math.round(Math.min(1, Math.max(0, status.progress || 0)) * 100);
+
+    if (status.downloading) {
+      chromeModelValue.textContent = `${percent}%`;
+      chromeModelMeter.hidden = false;
+      chromeModelBar.style.width = `${percent}%`;
+      chromeModelDownload.hidden = true;
+      chromeModelDownload.disabled = false;
+      chromeModelHint.hidden = false;
+      chromeModelHint.textContent = 'Скачивание языковых пакетов…';
+      startModelPoll();
+      return;
+    }
+
+    stopModelPoll();
+    chromeModelMeter.hidden = true;
+    chromeModelBar.style.width = '0%';
+
+    if (status.availability === 'available') {
+      chromeModelValue.textContent = '✓';
+      chromeModelDownload.hidden = true;
+      chromeModelHint.hidden = true;
+      return;
+    }
+
+    if (status.availability === 'downloadable') {
+      chromeModelValue.textContent = 'Не скачаны';
+      chromeModelDownload.hidden = false;
+      chromeModelDownload.disabled = false;
+      chromeModelHint.hidden = false;
+      chromeModelHint.textContent = 'Нужны для on-device перевода RU→EN';
+      return;
+    }
+
+    if (status.availability === 'unavailable') {
+      chromeModelValue.textContent = 'Недоступны';
+      chromeModelDownload.hidden = true;
+      chromeModelHint.hidden = false;
+      chromeModelHint.textContent = status.error || 'Пара RU→EN не поддерживается';
+      return;
+    }
+
+    chromeModelValue.textContent = 'Нет API';
+    chromeModelDownload.hidden = true;
+    chromeModelHint.hidden = false;
+    chromeModelHint.textContent =
+      status.error || 'Нужен Chrome 138+ (desktop) с Translator API';
+  }
+
+  async function loadChromeModelStatus({ silent = false } = {}) {
+    if (providerSelect.value !== 'chrome') {
+      chromeModel.hidden = true;
+      stopModelPoll();
+      return;
+    }
+
+    chromeModel.hidden = false;
+    try {
+      const status = await chrome.runtime.sendMessage({
+        type: 'GET_CHROME_MODEL_STATUS',
+      });
+      applyChromeModelStatus(status);
+    } catch (error) {
+      if (!silent) {
+        applyChromeModelStatus({
+          availability: 'unsupported',
+          downloading: false,
+          progress: 0,
+          error: error.message,
+        });
+      }
+    }
+  }
+
   function applySettingsToUi(settings) {
     enabledToggle.checked = settings.enabled;
     counterToggle.checked = settings.showCharCounter;
     providerSelect.value = settings.provider;
-    providerHint.hidden = settings.provider !== 'google';
+    applyProviderHint(settings.provider);
+    chromeModel.hidden = settings.provider !== 'chrome';
+    if (settings.provider !== 'chrome') stopModelPoll();
   }
 
   async function loadQuota() {
     try {
       const quota = await chrome.runtime.sendMessage({ type: 'GET_QUOTA' });
+
+      if (quota?.period === 'none' || quota?.limit == null) {
+        quotaLabel.textContent = 'Лимит';
+        quotaValue.textContent = 'Без лимита';
+        quotaBar.style.width = '0%';
+        if (quotaMeter) quotaMeter.hidden = true;
+        return;
+      }
+
+      if (quotaMeter) quotaMeter.hidden = false;
       const used = quota?.charsUsed ?? 0;
       const limit = quota?.limit ?? quota?.dailyLimit ?? 0;
       const period = quota?.period === 'day' ? 'день' : 'месяц';
@@ -36,6 +169,7 @@
       quotaLabel.textContent = 'Лимит';
       quotaValue.textContent = '… / …';
       quotaBar.style.width = '0%';
+      if (quotaMeter) quotaMeter.hidden = false;
     }
   }
 
@@ -43,6 +177,7 @@
     const settings = await settingsApi.getSettings();
     applySettingsToUi(settings);
     await loadQuota();
+    await loadChromeModelStatus();
 
     enabledToggle.addEventListener('change', async () => {
       const next = await settingsApi.setSettings({ enabled: enabledToggle.checked });
@@ -60,11 +195,50 @@
       const next = await settingsApi.setSettings({ provider: providerSelect.value });
       applySettingsToUi(next);
       await loadQuota();
+      await loadChromeModelStatus();
+    });
+
+    chromeModelDownload.addEventListener('click', async () => {
+      chromeModelDownload.disabled = true;
+      chromeModelValue.textContent = '0%';
+      chromeModelMeter.hidden = false;
+      chromeModelBar.style.width = '0%';
+      chromeModelHint.hidden = false;
+      chromeModelHint.textContent = 'Скачивание языковых пакетов…';
+      startModelPoll();
+      try {
+        const status = await chrome.runtime.sendMessage({
+          type: 'ENSURE_CHROME_MODEL',
+        });
+        applyChromeModelStatus(status);
+      } catch (error) {
+        applyChromeModelStatus({
+          availability: 'downloadable',
+          downloading: false,
+          progress: 0,
+          error: error.message,
+        });
+        chromeModelHint.hidden = false;
+        chromeModelHint.textContent = error.message || 'Не удалось скачать пакеты';
+        chromeModelDownload.hidden = false;
+        chromeModelDownload.disabled = false;
+      }
+    });
+
+    chrome.runtime.onMessage.addListener((message) => {
+      if (
+        message?.type !== 'CHROME_MODEL_STATUS' ||
+        providerSelect.value !== 'chrome'
+      ) {
+        return;
+      }
+      applyChromeModelStatus(message.status);
     });
 
     settingsApi.subscribe((next) => {
       applySettingsToUi(next);
       loadQuota();
+      loadChromeModelStatus();
     });
   }
 

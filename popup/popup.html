@@ -30,19 +30,6 @@
       </section>
 
       <section class="popup__section">
-        <label class="popup__field" for="provider-select">
-          <span class="popup__toggle-text">
-            <span class="popup__label">Провайдер</span>
-            <span id="provider-hint" class="popup__hint"
-              >При исчерпании лимита — MyMemory</span
-            >
-          </span>
-          <select id="provider-select" class="popup__select">
-            <option value="google">Google Translate</option>
-            <option value="mymemory">MyMemory</option>
-          </select>
-        </label>
-
         <label class="popup__toggle">
           <span class="popup__toggle-text">
             <span class="popup__label">Расширение</span>
@@ -58,6 +45,32 @@
           </span>
           <input id="counter-toggle" type="checkbox" role="switch" />
         </label>
+
+        <label class="popup__field" for="provider-select">
+          <span class="popup__toggle-text">
+            <span class="popup__label">Провайдер</span>
+          </span>
+          <select id="provider-select" class="popup__select">
+            <option value="chrome">Chrome</option>
+            <option value="google">Google Translate</option>
+            <option value="mymemory">MyMemory</option>
+          </select>
+          <span id="provider-hint" class="popup__hint"></span>
+        </label>
+
+        <div id="chrome-model" class="popup__model" hidden>
+          <div class="popup__row">
+            <span class="popup__label">Пакеты RU→EN</span>
+            <span id="chrome-model-value" class="popup__value">…</span>
+          </div>
+          <div id="chrome-model-meter" class="popup__meter" hidden>
+            <div id="chrome-model-bar" class="popup__meter-bar"></div>
+          </div>
+          <p id="chrome-model-hint" class="popup__hint" hidden></p>
+          <button id="chrome-model-download" type="button" class="popup__button" hidden>
+            Скачать пакеты
+          </button>
+        </div>
       </section>
     </main>
     <script src="../settings.js"></script>
