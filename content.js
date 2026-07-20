@@ -25,13 +25,20 @@
   }
 
   function isExtensionEnabled() {
-    return settings?.enabled !== false;
+    return settings?.enabled !== false && !isBlockedHost();
+  }
+
+  function isBlockedHost() {
+    const host = window.location.hostname.toLowerCase();
+    return settings?.blockedDomains?.some(
+      (domain) => host === domain || host.endsWith(`.${domain}`)
+    );
   }
 
   function notifyReloadNeeded() {
     if (window.__inputTranslateReloadNotified) return;
     window.__inputTranslateReloadNotified = true;
-    ui?.showToast('Перезагрузите страницу, чтобы использовать Input Translate');
+    ui?.showToast('Перезагрузите страницу, чтобы использовать Inpulator');
   }
 
   function handleInvalidatedContext(error) {
@@ -76,7 +83,11 @@
       isIgnoredTarget: (target) => ui.contains(target),
     });
 
-    document.addEventListener('keydown', onHotkeyKeydown, true);
+    // Chrome may leave Option+Shift shortcuts unbound on macOS. Capture the
+    // in-page shortcut there so the generated character is not inserted.
+    if (navigator.platform.includes('Mac')) {
+      document.addEventListener('keydown', onMacHotkeyKeydown, true);
+    }
 
     try {
       chrome.runtime.onMessage.addListener((message) => {
@@ -87,7 +98,7 @@
     }
   }
 
-  function onHotkeyKeydown(event) {
+  function onMacHotkeyKeydown(event) {
     if (event.code !== 'KeyT' || !event.altKey || !event.shiftKey) return;
     if (event.ctrlKey || event.metaKey || event.repeat) return;
     event.preventDefault();

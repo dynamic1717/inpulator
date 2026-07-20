@@ -16,14 +16,18 @@
   const chromeModelBar = document.getElementById('chrome-model-bar');
   const chromeModelHint = document.getElementById('chrome-model-hint');
   const chromeModelDownload = document.getElementById('chrome-model-download');
+  const googleApiKeyField = document.getElementById('google-api-key-field');
+  const googleApiKey = document.getElementById('google-api-key');
+  const googleApiKeyHint = document.getElementById('google-api-key-hint');
+  const googleApiKeyClear = document.getElementById('google-api-key-clear');
+  const blockedDomains = document.getElementById('blocked-domains');
 
   const PROVIDER_HINTS = {
     chrome:
       'On-device, без ключа и лимита API. Приватно и офлайн после скачивания пакетов.',
     google:
-      'Лучшее качество перевода, до 500 000 символов/мес. Нужны API key и интернет; текст уходит в Google.',
-    mymemory:
-      'Среднее качество перевода, до 50 000 символов/день. Запасной вариант; текст уходит на внешний сервис.',
+      'До 500 000 символов/мес. Нужен личный API key и интернет; текст уходит в Google.',
+    mymemory: 'До 50 000 символов/день. Текст уходит на внешний сервис MyMemory.',
   };
 
   function applyProviderHint(provider) {
@@ -142,7 +146,26 @@
     providerSelect.value = settings.provider;
     applyProviderHint(settings.provider);
     chromeModel.hidden = settings.provider !== 'chrome';
+    googleApiKeyField.hidden = settings.provider !== 'google';
+    blockedDomains.value = settings.blockedDomains.join(', ');
     if (settings.provider !== 'chrome') stopModelPoll();
+  }
+
+  async function loadGoogleApiKeyStatus() {
+    const apiKey = await settingsApi.getGoogleApiKey();
+    googleApiKey.value = '';
+    googleApiKey.placeholder = apiKey ? 'Ключ сохранён' : 'Введите личный ключ';
+    googleApiKeyClear.hidden = !apiKey;
+    googleApiKeyHint.textContent = apiKey
+      ? 'Личный ключ сохранён локально в расширении.'
+      : 'Ключ не задан. Google Translate недоступен.';
+  }
+
+  function parseBlockedDomains(value) {
+    return value
+      .split(/[\n,]/)
+      .map((domain) => settingsApi.normalizeDomain(domain))
+      .filter(Boolean);
   }
 
   async function loadQuota() {
@@ -176,6 +199,7 @@
   async function init() {
     const settings = await settingsApi.getSettings();
     applySettingsToUi(settings);
+    await loadGoogleApiKeyStatus();
     await loadQuota();
     await loadChromeModelStatus();
 
@@ -196,6 +220,28 @@
       applySettingsToUi(next);
       await loadQuota();
       await loadChromeModelStatus();
+      if (next.provider === 'google') await loadGoogleApiKeyStatus();
+    });
+
+    googleApiKey.addEventListener('change', async () => {
+      const apiKey = googleApiKey.value.trim();
+      if (!apiKey) return;
+      await settingsApi.setGoogleApiKey(apiKey);
+      await loadGoogleApiKeyStatus();
+      await loadQuota();
+    });
+
+    googleApiKeyClear.addEventListener('click', async () => {
+      await settingsApi.setGoogleApiKey('');
+      await loadGoogleApiKeyStatus();
+      await loadQuota();
+    });
+
+    blockedDomains.addEventListener('change', async () => {
+      const next = await settingsApi.setSettings({
+        blockedDomains: parseBlockedDomains(blockedDomains.value),
+      });
+      applySettingsToUi(next);
     });
 
     chromeModelDownload.addEventListener('click', async () => {

@@ -28,7 +28,7 @@ async function applyActionIcon(enabled) {
     path: enabled ? COLOR_ICONS : DISABLED_ICONS,
   });
   await chrome.action.setTitle({
-    title: enabled ? 'Input Translate — Перевод текста' : 'Input Translate — выключено',
+    title: enabled ? 'Inpulator — Перевод текста' : 'Inpulator — выключено',
   });
 }
 
@@ -76,7 +76,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           availability: 'unsupported',
           downloading: false,
           progress: 0,
-          error: error.message || 'Status check failed',
+          error: error.message || 'Не удалось проверить статус',
         })
       );
     return true;
@@ -94,7 +94,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           availability: 'unsupported',
           downloading: false,
           progress: 0,
-          error: error.message || 'Model download failed',
+          error: error.message || 'Не удалось скачать модель',
         })
       );
     return true;
@@ -120,7 +120,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   translate(message.text)
     .then(sendResponse)
-    .catch((error) => sendResponse({ error: error.message || 'Translation failed' }));
+    .catch((error) => sendResponse({ error: error.message || 'Перевод не удался' }));
   return true;
 });
 

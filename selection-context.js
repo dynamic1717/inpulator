@@ -115,7 +115,7 @@
       if (replaced) return;
     }
 
-    throw new Error('Could not replace text');
+    throw new Error('Не удалось заменить текст');
   }
 
   window.InputTranslate.selectionContext = {

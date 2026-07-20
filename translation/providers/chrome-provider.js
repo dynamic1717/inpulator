@@ -23,7 +23,7 @@ export function createChromeProvider({
     async isAvailable() {
       try {
         const availability = await checkAvailability();
-        return availability === 'available' || availability === 'downloadable';
+        return availability === 'available';
       } catch {
         return false;
       }
@@ -47,7 +47,7 @@ export function createChromeProvider({
         targetLanguage: options.target,
       });
       const translated = response?.translatedText;
-      if (!translated) throw new Error('Chrome translation failed');
+      if (!translated) throw new Error('Перевод Chrome не удался');
       return `${leadingWhitespace}${translated}${trailingWhitespace}`;
     },
   };

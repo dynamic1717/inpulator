@@ -57,5 +57,5 @@ test('provider reports a timeout when the request is aborted', async () => {
       }),
   });
 
-  await assert.rejects(provider.translate('тест'), /timed out/);
+  await assert.rejects(provider.translate('тест'), /Превышено время ожидания/);
 });

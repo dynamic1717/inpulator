@@ -55,7 +55,7 @@ async function refreshAvailability(sourceLanguage, targetLanguage) {
       availability: 'unsupported',
       downloading: false,
       progress: 0,
-      error: error.message || 'Availability check failed',
+      error: error.message || 'Не удалось проверить доступность',
     };
   }
   broadcastStatus();
@@ -107,7 +107,7 @@ async function getTranslator(sourceLanguage, targetLanguage) {
     return translator;
   } catch (error) {
     modelStatus.downloading = false;
-    modelStatus.error = error.message || 'Download failed';
+    modelStatus.error = error.message || 'Не удалось скачать пакеты';
     broadcastStatus();
     throw error;
   }
@@ -143,7 +143,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     getAvailabilityCompat(message.sourceLanguage, message.targetLanguage)
       .then((availability) => sendResponse({ availability }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Availability check failed' })
+        sendResponse({ error: error.message || 'Не удалось проверить доступность' })
       );
     return true;
   }
@@ -152,7 +152,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     refreshAvailability(message.sourceLanguage, message.targetLanguage)
       .then((status) => sendResponse({ status }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Status check failed' })
+        sendResponse({ error: error.message || 'Не удалось проверить статус' })
       );
     return true;
   }
@@ -161,7 +161,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     ensureModel(message.sourceLanguage, message.targetLanguage)
       .then((status) => sendResponse({ status }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Model download failed' })
+        sendResponse({ error: error.message || 'Не удалось скачать модель' })
       );
     return true;
   }
@@ -170,7 +170,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     translateText(message.text, message.sourceLanguage, message.targetLanguage)
       .then((translatedText) => sendResponse({ translatedText }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Chrome translation failed' })
+        sendResponse({ error: error.message || 'Перевод Chrome не удался' })
       );
     return true;
   }

@@ -97,7 +97,7 @@ test('service uses chrome when selected and available', async () => {
   assert.deepEqual(counts(), { chromeCalls: 1, googleCalls: 0, mymemoryCalls: 0 });
 });
 
-test('service falls back to google when chrome is unavailable', async () => {
+test('service does not fall back when selected chrome is unavailable', async () => {
   const { providers, counts } = makeProviders({ chromeAvailable: false });
   const service = createTranslationService({
     providers,
@@ -108,33 +108,11 @@ test('service falls back to google when chrome is unavailable', async () => {
     }),
   });
 
-  const result = await service.translate('тест');
-  assert.equal(result.translatedText, 'from-google');
-  assert.equal(result.provider, 'google');
-  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 1, mymemoryCalls: 0 });
+  await assert.rejects(service.translate('тест'), /Переводчик Chrome недоступен/);
+  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 0, mymemoryCalls: 0 });
 });
 
-test('service falls back to mymemory when chrome unavailable and google quota exhausted', async () => {
-  const { providers, counts } = makeProviders({
-    chromeAvailable: false,
-    googleRemaining: 0,
-  });
-  const service = createTranslationService({
-    providers,
-    getSettings: async () => ({
-      enabled: true,
-      showCharCounter: true,
-      provider: 'chrome',
-    }),
-  });
-
-  const result = await service.translate('тест');
-  assert.equal(result.translatedText, 'from-mymemory');
-  assert.equal(result.provider, 'mymemory');
-  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 0, mymemoryCalls: 1 });
-});
-
-test('service falls back to mymemory when google quota is exhausted', async () => {
+test('service uses selected google provider even when its local quota is exhausted', async () => {
   const { providers, counts } = makeProviders({ googleRemaining: 0 });
   const service = createTranslationService({
     providers,
@@ -146,9 +124,9 @@ test('service falls back to mymemory when google quota is exhausted', async () =
   });
 
   const result = await service.translate('тест');
-  assert.equal(result.translatedText, 'from-mymemory');
-  assert.equal(result.provider, 'mymemory');
-  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 0, mymemoryCalls: 1 });
+  assert.equal(result.translatedText, 'from-google');
+  assert.equal(result.provider, 'google');
+  assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 1, mymemoryCalls: 0 });
 });
 
 test('service errors when google is selected without api key', async () => {
@@ -162,5 +140,5 @@ test('service errors when google is selected without api key', async () => {
     }),
   });
 
-  await assert.rejects(service.translate('тест'), /Google API key missing/);
+  await assert.rejects(service.translate('тест'), /Ключ Google API не найден/);
 });

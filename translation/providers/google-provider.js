@@ -16,6 +16,7 @@ export function createGoogleProvider({
   fetchImpl = fetch,
   timeoutMs = REQUEST_TIMEOUT_MS,
   apiKey = '',
+  getApiKey = async () => apiKey,
 } = {}) {
   const store = storage ?? chrome.storage.local;
   let queue = Promise.resolve();
@@ -51,9 +52,9 @@ export function createGoogleProvider({
     await store.set({ [STORAGE_KEY]: record });
   }
 
-  async function fetchChunk(text, { source, target }) {
+  async function fetchChunk(text, { source, target }, currentApiKey) {
     const url = new URL(API_URL);
-    url.searchParams.set('key', apiKey);
+    url.searchParams.set('key', currentApiKey);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -73,34 +74,37 @@ export function createGoogleProvider({
       });
     } catch {
       if (controller.signal.aborted) {
-        throw new Error('Translation request timed out');
+        throw new Error('Превышено время ожидания перевода');
       }
-      throw new Error('Network error');
+      throw new Error('Ошибка сети');
     } finally {
       clearTimeout(timeoutId);
     }
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const message =
-        data?.error?.message || `Google Translate API error: ${response.status}`;
-      throw new Error(message);
+      throw new Error(
+        data?.error?.message
+          ? `Ошибка Google Translate: ${data.error.message}`
+          : `Ошибка Google Translate API: ${response.status}`
+      );
     }
 
     const translated = data?.data?.translations?.[0]?.translatedText;
-    if (!translated) throw new Error('Translation failed');
+    if (!translated) throw new Error('Перевод не удался');
     return translated;
   }
 
   return {
     id: 'google',
-    isAvailable: async () => Boolean(apiKey),
+    isAvailable: async () => Boolean(await getApiKey()),
     getQuota,
     translate(text, options = DEFAULT_LANGUAGE_PAIR) {
       return serialize(async () => {
-        if (!apiKey) {
+        const currentApiKey = await getApiKey();
+        if (!currentApiKey) {
           throw new Error(
-            'Google API key missing. Add GOOGLE_TRANSLATE_API_KEY to .env and run npm run env'
+            'Ключ Google API не найден. Добавьте его в настройках расширения.'
           );
         }
 
@@ -108,14 +112,14 @@ export function createGoogleProvider({
         const quota = await getQuota();
         if (content.length > quota.remaining) {
           throw new Error(
-            `Not enough quota: ${content.length} chars selected, ${quota.remaining} remaining`
+            `Недостаточно лимита: ${content.length} символов выбрано, ${quota.remaining} осталось`
           );
         }
 
         const chunks = splitIntoChunks(content, MAX_CHUNK_SIZE);
         let translatedText = '';
         for (const chunk of chunks) {
-          translatedText += `${await fetchChunk(chunk.text, options)}${chunk.separator}`;
+          translatedText += `${await fetchChunk(chunk.text, options, currentApiKey)}${chunk.separator}`;
         }
 
         await recordUsage(content.length);

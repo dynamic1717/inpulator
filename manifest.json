@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Input Translate",
-  "version": "0.11.0",
+  "name": "Inpulator",
+  "version": "0.12.0",
   "description": "Перевод выделенного текста в полях ввода с русского языка на английский.",
   "icons": {
     "16": "icons/icon16.png",
@@ -9,7 +9,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "Input Translate — Перевод текста",
+    "default_title": "Inpulator — Перевод текста",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -30,7 +30,7 @@
     "translate-selection": {
       "suggested_key": {
         "default": "Alt+Shift+T",
-        "mac": "Alt+Shift+T"
+        "mac": "Option+Shift+T"
       },
       "description": "Перевести выделенный текст с русского на английский"
     }

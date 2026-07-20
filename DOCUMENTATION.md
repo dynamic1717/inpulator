@@ -1,6 +1,6 @@
-# Input Translate — документация проекта
+# Inpulator — документация проекта
 
-Техническая документация Chrome-расширения Input Translate.
+Техническая документация Chrome-расширения Inpulator.
 
 Пользовательское описание: [README.md](README.md)
 
@@ -42,7 +42,7 @@ detectSelectionContext()
         ↓
 floating button UI
         ↓
-TRANSLATE / GET_QUOTA msg  →      Translation service → Google / MyMemory
+TRANSLATE / GET_QUOTA msg  →      Translation service → выбранный provider
                              ←    перевод + quota
         ↓
 replace text (native / editable / clipboard)
@@ -55,8 +55,7 @@ replace text (native / editable / clipboard)
 | `manifest.json`         | Manifest V3, permissions, content scripts, commands |
 | `settings.js`           | IIFE: чтение/запись `extensionSettings`             |
 | `settings-defaults.js`  | ES-модуль констант настроек для background          |
-| `env.js`                | Сгенерированные креды (`npm run env`)               |
-| `popup/`                | Окно настроек (лимит, провайдер, вкл/выкл, счётчик) |
+| `popup/`                | Окно настроек (лимит, провайдер, ключ, исключения)  |
 | `offscreen/`            | Host для Chrome Translator API                      |
 | `offscreen-manager.js`  | Создание offscreen document и messaging             |
 | `shadow-dom.js`         | Обход shadow boundary, поиск editable от selection  |
@@ -89,28 +88,22 @@ replace text (native / editable / clipboard)
 Ключ в `chrome.storage.local`:
 
 ```js
-{ enabled: true, showCharCounter: true, provider: 'chrome' }
+{ enabled: true, showCharCounter: true, provider: 'chrome', blockedDomains: [] }
 ```
 
 - **enabled** — глобальный вкл/выкл: скрывает кнопку, блокирует hotkey; `chrome.action.setIcon` переключает цветные / grayscale иконки
 - **showCharCounter** — показывать ли `выделено/остаток` на плавающей кнопке
 - **provider** — `chrome` (default), `google` или `mymemory`
+- **blockedDomains** — домены, где UI перевода не показывается
 - Popup: `action.default_popup` → `popup/popup.html`
 - Изменения применяются через `chrome.storage.onChanged` без reload страницы
 
-## Креды (env)
+## Google API key
 
-```bash
-cp .env.example .env   # заполнить ключи
-npm run env            # → env.js
-```
-
-| Переменная                 | Назначение                        |
-| -------------------------- | --------------------------------- |
-| `GOOGLE_TRANSLATE_API_KEY` | Cloud Translation API v2          |
-| `MYMEMORY_EMAIL`           | Параметр `de` для лимита MyMemory |
-
-`.env` и `env.js` в `.gitignore`.
+Google API key пользователь добавляет в popup. Ключ хранится локально в
+`chrome.storage.local` под отдельным ключом `googleTranslateApiKey` и не включается
+в исходный код или распространяемую папку расширения. Ключ нужно ограничить Cloud
+Translation API и квотами проекта Google Cloud.
 
 ## Определение русского текста
 
@@ -149,20 +142,17 @@ On-device через offscreen document (`offscreen/offscreen.js`). Service work
 | ---------- | --------------------------------------------- |
 | Endpoint   | `GET https://api.mymemory.translated.net/get` |
 | `langpair` | `ru\|en`                                      |
-| `de`       | email из env                                  |
 | Max chunk  | 450 символов                                  |
 | Quota      | Локально 50 000 / день (`dailyUsage`)         |
 
-### Выбор провайдера и fallback
+### Выбор провайдера
 
 `translation/translation-service.js` читает `settings.provider`.
 
 - `getQuota` — всегда quota выбранного провайдера
-- `translate` при `chrome`: если unavailable → Google (если ключ и quota) → MyMemory
-- `translate` при `google`: если локальный `remaining` меньше длины текста → MyMemory
-- `translate` при `mymemory`: только MyMemory
-- Ошибки сети/ключа Google **не** маскируются fallback’ом (только quota / chrome unavailable)
-- Ответ: `{ translatedText, provider, quota }` — `provider` = фактический движок
+- `translate` вызывает только выбранный провайдер
+- отсутствие Google API key, недоступный Chrome Translator и исчерпанный локальный лимит возвращают ошибку без автоматического переключения
+- Ответ: `{ translatedText, provider, quota }` — `provider` всегда соответствует выбранному движку
 
 ### Альтернативы (не реализованы)
 
@@ -205,14 +195,14 @@ On-device через offscreen document (`offscreen/offscreen.js`). Service work
 - Loading: спиннер на кнопке
 - Ошибки: toast внизу экрана
 - Ctrl+Z работает после замены (через `insertText` / native value)
-- Extension context invalidated → toast «Reload page to use Input Translate»
+- Extension context invalidated → toast «Reload page to use Inpulator»
 
 ## Безопасность
 
 - Не активируется на полях паролей
 - Не логирует переводы
 - Текст уходит на Google Cloud Translation и/или MyMemory
-- Креды только в `.env` / `env.js` (не коммитятся)
+- Google API key хранится локально в `chrome.storage.local`; распространение общего ключа запрещено
 
 ## Структура проекта
 
@@ -220,8 +210,6 @@ On-device через offscreen document (`offscreen/offscreen.js`). Service work
 input-translate-ext/
 ├── manifest.json
 ├── background.js
-├── env.js                 # generated, gitignored
-├── .env.example
 ├── settings.js
 ├── settings-defaults.js
 ├── offscreen/
@@ -237,7 +225,6 @@ input-translate-ext/
 │       ├── google-provider.js
 │       └── mymemory-provider.js
 ├── popup/
-├── scripts/generate-env.mjs
 ├── test/
 ├── content.js
 ├── styles.css
@@ -269,7 +256,6 @@ input-translate-ext/
 
 - Локальный quota counter на кнопке
 - Обработка `quotaFinished`
-- `de` email для лимита 50k
 
 ### Фаза 4 ✅
 
@@ -280,29 +266,26 @@ input-translate-ext/
 
 - Google Cloud Translation API
 - Выбор провайдера в popup
-- Fallback Google→MyMemory при исчерпании локального лимита
-- Креды через `.env` → `npm run env`
+- Личный Google API key в `chrome.storage.local`
 
 ### Фаза 6 ✅
 
 - Chrome Translator API (on-device) как default
 - Offscreen document + permission `offscreen`
-- Fallback Chrome → Google → MyMemory
+- Выбранный провайдер без автоматического fallback
 
-### Фаза 7 (опционально)
+### Фаза 7
 
-- [ ] Blacklist доменов
+- [x] Исключённые домены
 - [ ] Настройки направления перевода
 
 ## Установка (dev)
 
 1. Клонировать репозиторий
-2. `cp .env.example .env` и заполнить ключи
-3. `npm install && npm run env`
-4. `chrome://extensions` → Режим разработчика
-5. «Загрузить распакованное расширение» → папка проекта
-6. После каждого обновления кода — refresh расширения + **F5 на вкладках**
-7. После смены `.env` — снова `npm run env` + refresh расширения
+2. `npm install`
+3. `chrome://extensions` → Режим разработчика
+4. «Загрузить распакованное расширение» → папка проекта
+5. После каждого обновления кода — refresh расширения + **F5 на вкладках**
 
 ## Стек
 
@@ -310,4 +293,3 @@ input-translate-ext/
 - **Manifest V3**
 - **Google Cloud Translation API** + **MyMemory API** + **Chrome Translator API**
 - **Node test runner**, ESLint и Prettier для локальных проверок
-- Генерация `env.js` через `npm run env`

@@ -20,11 +20,11 @@ test('chrome provider translates via sendToOffscreen and preserves whitespace', 
   assert.equal(calls[0].targetLanguage, 'en');
 });
 
-test('chrome provider isAvailable when offscreen reports downloadable', async () => {
+test('chrome provider is unavailable until a downloadable model is installed', async () => {
   const provider = createChromeProvider({
     sendToOffscreen: async () => ({ availability: 'downloadable' }),
   });
-  assert.equal(await provider.isAvailable(), true);
+  assert.equal(await provider.isAvailable(), false);
 });
 
 test('chrome provider isAvailable is false when unavailable', async () => {

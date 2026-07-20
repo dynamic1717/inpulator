@@ -1,11 +1,13 @@
-import { ENV } from '../env.js';
 import { sendToOffscreen } from '../offscreen-manager.js';
 import { DEFAULT_LANGUAGE_PAIR } from './provider.js';
-import { normalizeText } from './text-utils.js';
 import { createChromeProvider } from './providers/chrome-provider.js';
 import { createGoogleProvider } from './providers/google-provider.js';
 import { createMyMemoryProvider } from './providers/mymemory-provider.js';
-import { SETTINGS_KEY, normalizeSettings } from '../settings-defaults.js';
+import {
+  GOOGLE_API_KEY_STORAGE_KEY,
+  SETTINGS_KEY,
+  normalizeSettings,
+} from '../settings-defaults.js';
 
 const PROVIDER_CHROME = 'chrome';
 const PROVIDER_GOOGLE = 'google';
@@ -47,54 +49,26 @@ export function createTranslationService({
     };
   }
 
-  function contentLengthOf(text) {
-    try {
-      return normalizeText(text).content.length;
-    } catch {
-      throw new Error('Empty text');
-    }
-  }
-
-  async function translateWithGoogleOrMyMemory(text) {
-    const google = providersById.get(PROVIDER_GOOGLE);
-    const mymemory = getProviderOrThrow(PROVIDER_MYMEMORY);
-
-    if (google && (await google.isAvailable())) {
-      const contentLength = contentLengthOf(text);
-      const googleQuota = google.getQuota ? await google.getQuota() : null;
-      if (!googleQuota || contentLength <= googleQuota.remaining) {
-        return translateWithProvider(google, text);
-      }
-    }
-
-    return translateWithProvider(mymemory, text);
-  }
-
   return {
     async translate(text) {
       const preferredId = await resolvePreferredId();
 
-      if (preferredId === PROVIDER_MYMEMORY) {
-        return translateWithProvider(getProviderOrThrow(PROVIDER_MYMEMORY), text);
-      }
-
-      if (preferredId === PROVIDER_GOOGLE) {
-        const google = getProviderOrThrow(PROVIDER_GOOGLE);
-        if (!(await google.isAvailable())) {
+      const provider = getProviderOrThrow(preferredId);
+      if (!(await provider.isAvailable())) {
+        if (preferredId === PROVIDER_GOOGLE) {
           throw new Error(
-            'Google API key missing. Add GOOGLE_TRANSLATE_API_KEY to .env and run npm run env'
+            'Ключ Google API не найден. Добавьте его в настройках расширения.'
           );
         }
-        return translateWithGoogleOrMyMemory(text);
+        if (preferredId === PROVIDER_CHROME) {
+          throw new Error(
+            'Переводчик Chrome недоступен. Скачайте пакет RU→EN или выберите другого провайдера.'
+          );
+        }
+        throw new Error(`Провайдер ${provider.id} недоступен`);
       }
 
-      // preferred: chrome
-      const chrome = providersById.get(PROVIDER_CHROME);
-      if (chrome && (await chrome.isAvailable())) {
-        return translateWithProvider(chrome, text);
-      }
-
-      return translateWithGoogleOrMyMemory(text);
+      return translateWithProvider(provider, text);
     },
     async getQuota() {
       const provider = await getSelectedProvider();
@@ -112,6 +86,12 @@ async function defaultGetSettings() {
   return normalizeSettings(data[SETTINGS_KEY]);
 }
 
+async function getGoogleApiKey() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return '';
+  const data = await chrome.storage.local.get(GOOGLE_API_KEY_STORAGE_KEY);
+  return String(data[GOOGLE_API_KEY_STORAGE_KEY] || '').trim();
+}
+
 let defaultService = null;
 
 function getDefaultService() {
@@ -119,8 +99,8 @@ function getDefaultService() {
     defaultService = createTranslationService({
       providers: [
         createChromeProvider({ sendToOffscreen }),
-        createGoogleProvider({ apiKey: ENV.GOOGLE_TRANSLATE_API_KEY }),
-        createMyMemoryProvider({ email: ENV.MYMEMORY_EMAIL }),
+        createGoogleProvider({ getApiKey: getGoogleApiKey }),
+        createMyMemoryProvider(),
       ],
     });
   }

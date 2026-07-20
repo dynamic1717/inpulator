@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Input Translate</title>
+    <title>Inpulator</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
@@ -16,7 +16,7 @@
           width="28"
           height="28"
         />
-        <h1 class="popup__title">Input Translate</h1>
+        <h1 class="popup__title">Inpulator</h1>
       </header>
 
       <section class="popup__section" aria-labelledby="quota-label">
@@ -71,6 +71,40 @@
             Скачать пакеты
           </button>
         </div>
+
+        <label
+          id="google-api-key-field"
+          class="popup__field"
+          for="google-api-key"
+          hidden
+        >
+          <span class="popup__label">Google API key</span>
+          <input
+            id="google-api-key"
+            class="popup__input"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Введите личный ключ"
+          />
+          <span id="google-api-key-hint" class="popup__hint"></span>
+          <button id="google-api-key-clear" type="button" class="popup__button" hidden>
+            Удалить ключ
+          </button>
+        </label>
+
+        <label class="popup__field" for="blocked-domains">
+          <span class="popup__label">Исключённые сайты</span>
+          <textarea
+            id="blocked-domains"
+            class="popup__input"
+            rows="2"
+            placeholder="bank.example, login.example"
+          ></textarea>
+          <span class="popup__hint"
+            >По одному домену через запятую или с новой строки</span
+          >
+        </label>
       </section>
     </main>
     <script src="../settings.js"></script>

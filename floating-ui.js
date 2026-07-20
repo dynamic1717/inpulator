@@ -66,7 +66,7 @@
       button = document.createElement('button');
       button.id = 'input-translate-btn';
       button.type = 'button';
-      button.setAttribute('aria-label', 'Translate to English');
+      button.setAttribute('aria-label', 'Перевести на английский');
       button.addEventListener('mousedown', (event) => event.preventDefault());
       button.addEventListener('click', onTranslate);
       document.documentElement.appendChild(button);
@@ -79,14 +79,14 @@
       if (!showCounter) {
         button.classList.remove('input-translate-btn--with-counter');
         button.innerHTML = TRANSLATE_ICON;
-        button.title = 'Translate to English (Alt+Shift+T)';
+        button.title = 'Перевести на английский (Alt+Shift+T)';
         return;
       }
 
       const counter = `${formatCount(selectedChars)} / ${formatCount(remaining)}`;
       button.classList.add('input-translate-btn--with-counter');
       button.innerHTML = `${TRANSLATE_ICON}<span class="input-translate-counter">${counter}</span>`;
-      button.title = `Translate to English (${counter} chars, Alt+Shift+T)`;
+      button.title = `Перевести на английский (${counter} символов, Alt+Shift+T)`;
     }
 
     return {
