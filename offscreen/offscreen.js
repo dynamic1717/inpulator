@@ -10,6 +10,9 @@ let modelStatus = {
   error: null,
 };
 
+/** True while Translator.create() is in flight — prevents polls from clearing download UI. */
+let installInProgress = false;
+
 function pairKey(source, target) {
   return `${source}|${target}`;
 }
@@ -44,13 +47,19 @@ async function refreshAvailability(sourceLanguage, targetLanguage) {
     });
     modelStatus.availability = availability;
     modelStatus.error = null;
-    if (availability === 'available' && !modelStatus.downloading) {
+
+    if (installInProgress) {
+      // Keep in-flight download progress; only refresh availability label.
+    } else if (availability === 'available') {
+      modelStatus.downloading = false;
       modelStatus.progress = 1;
-    }
-    if (availability === 'downloadable' && !modelStatus.downloading) {
+    } else if (availability === 'downloading') {
+      modelStatus.downloading = true;
+    } else if (availability === 'downloadable' && !modelStatus.downloading) {
       modelStatus.progress = 0;
     }
   } catch (error) {
+    installInProgress = false;
     modelStatus = {
       availability: 'unsupported',
       downloading: false,
@@ -77,8 +86,12 @@ async function getTranslator(sourceLanguage, targetLanguage) {
     );
   }
 
+  const needsDownload =
+    availability === 'downloadable' || availability === 'downloading';
+
+  installInProgress = true;
   modelStatus.availability = availability;
-  if (availability === 'downloadable') {
+  if (needsDownload) {
     modelStatus.downloading = true;
     modelStatus.progress = 0;
     broadcastStatus();
@@ -90,13 +103,15 @@ async function getTranslator(sourceLanguage, targetLanguage) {
       targetLanguage,
       monitor(m) {
         m.addEventListener('downloadprogress', (event) => {
+          const loaded = Math.min(1, Math.max(0, Number(event.loaded) || 0));
+          modelStatus.progress = loaded;
           modelStatus.downloading = true;
-          modelStatus.progress = Number(event.loaded) || 0;
           broadcastStatus();
         });
       },
     });
     translators.set(key, translator);
+    installInProgress = false;
     modelStatus = {
       availability: 'available',
       downloading: false,
@@ -106,6 +121,7 @@ async function getTranslator(sourceLanguage, targetLanguage) {
     broadcastStatus();
     return translator;
   } catch (error) {
+    installInProgress = false;
     modelStatus.downloading = false;
     modelStatus.error = error.message || 'Не удалось скачать пакеты';
     broadcastStatus();

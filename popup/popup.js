@@ -67,8 +67,9 @@
     }
 
     const percent = Math.round(Math.min(1, Math.max(0, status.progress || 0)) * 100);
+    const isDownloading = status.downloading || status.availability === 'downloading';
 
-    if (status.downloading) {
+    if (isDownloading) {
       chromeModelValue.textContent = `${percent}%`;
       chromeModelMeter.hidden = false;
       chromeModelBar.style.width = `${percent}%`;
