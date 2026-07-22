@@ -10,7 +10,7 @@
   const DEFAULT_SETTINGS = {
     enabled: true,
     showCharCounter: true,
-    provider: 'chrome',
+    provider: 'mymemory',
     blockedDomains: [],
   };
 
@@ -26,9 +26,9 @@
 
   function normalizeSettings(raw) {
     const provider =
-      raw?.provider === 'mymemory' || raw?.provider === 'google'
+      raw?.provider === 'chrome' || raw?.provider === 'google'
         ? raw.provider
-        : 'chrome';
+        : 'mymemory';
     const blockedDomains = Array.isArray(raw?.blockedDomains)
       ? [...new Set(raw.blockedDomains.map(normalizeDomain).filter(Boolean))]
       : [];

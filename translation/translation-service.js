@@ -26,9 +26,9 @@ export function createTranslationService({
 
   async function resolvePreferredId() {
     const settings = await getSettings();
-    if (settings.provider === PROVIDER_MYMEMORY) return PROVIDER_MYMEMORY;
+    if (settings.provider === PROVIDER_CHROME) return PROVIDER_CHROME;
     if (settings.provider === PROVIDER_GOOGLE) return PROVIDER_GOOGLE;
-    return PROVIDER_CHROME;
+    return PROVIDER_MYMEMORY;
   }
 
   function getProviderOrThrow(id) {

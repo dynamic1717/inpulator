@@ -7,7 +7,7 @@ export const MYMEMORY_EMAIL_STORAGE_KEY = 'myMemoryEmail';
 export const DEFAULT_SETTINGS = {
   enabled: true,
   showCharCounter: true,
-  provider: 'chrome',
+  provider: 'mymemory',
   blockedDomains: [],
 };
 
@@ -30,9 +30,9 @@ export async function ensureMyMemoryEmail(storage = chrome.storage.local) {
 
 export function normalizeSettings(raw) {
   const provider =
-    raw?.provider === 'mymemory' || raw?.provider === 'google'
+    raw?.provider === 'chrome' || raw?.provider === 'google'
       ? raw.provider
-      : 'chrome';
+      : 'mymemory';
   const blockedDomains = Array.isArray(raw?.blockedDomains)
     ? [...new Set(raw.blockedDomains.map(normalizeDomain).filter(Boolean))]
     : [];
