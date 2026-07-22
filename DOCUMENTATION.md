@@ -138,12 +138,13 @@ On-device через offscreen document (`offscreen/offscreen.js`). Service work
 
 ### MyMemory
 
-| Параметр   | Значение                                      |
-| ---------- | --------------------------------------------- |
-| Endpoint   | `GET https://api.mymemory.translated.net/get` |
-| `langpair` | `ru\|en`                                      |
-| Max chunk  | 450 символов                                  |
-| Quota      | Локально 50 000 / день (`dailyUsage`)         |
+| Параметр     | Значение                                                    |
+| ------------ | ----------------------------------------------------------- |
+| Endpoint     | `GET https://api.mymemory.translated.net/get`               |
+| `langpair`   | `ru\|en`                                                    |
+| Max chunk    | 450 символов                                                |
+| Quota        | Локально 50 000 / день (`dailyUsage`)                       |
+| Email (`de`) | Автогенерируется при установке и хранится в `myMemoryEmail` |
 
 ### Выбор провайдера
 

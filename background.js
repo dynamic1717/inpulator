@@ -3,6 +3,7 @@ import { sendToOffscreen } from './offscreen-manager.js';
 import {
   DEFAULT_SETTINGS,
   SETTINGS_KEY,
+  ensureMyMemoryEmail,
   normalizeSettings,
 } from './settings-defaults.js';
 
@@ -43,10 +44,12 @@ chrome.runtime.onInstalled.addListener(() => {
       chrome.storage.local.set({ [SETTINGS_KEY]: { ...DEFAULT_SETTINGS } });
     }
   });
+  ensureMyMemoryEmail().catch(() => undefined);
   syncActionFromSettings();
 });
 
 chrome.runtime.onStartup.addListener(() => {
+  ensureMyMemoryEmail().catch(() => undefined);
   syncActionFromSettings();
 });
 
