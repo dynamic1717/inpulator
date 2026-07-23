@@ -17,7 +17,13 @@
       "128": "icons/icon128.png"
     }
   },
-  "permissions": ["clipboardRead", "clipboardWrite", "storage", "offscreen", "activeTab"],
+  "permissions": [
+    "clipboardRead",
+    "clipboardWrite",
+    "storage",
+    "offscreen",
+    "activeTab"
+  ],
   "host_permissions": [
     "https://api.mymemory.translated.net/*",
     "https://translation.googleapis.com/*"

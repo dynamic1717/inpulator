@@ -145,9 +145,7 @@
   }
 
   function isHostBlocked(host, domains) {
-    return domains.some(
-      (domain) => host === domain || host.endsWith(`.${domain}`)
-    );
+    return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
   }
 
   function applySiteToggle(settings) {
@@ -278,10 +276,7 @@
       if (siteToggle.checked) {
         blockedDomains = current.blockedDomains.filter(
           (domain) =>
-            !(
-              currentHostname === domain ||
-              currentHostname.endsWith(`.${domain}`)
-            )
+            !(currentHostname === domain || currentHostname.endsWith(`.${domain}`))
         );
       } else {
         blockedDomains = current.blockedDomains.includes(currentHostname)
