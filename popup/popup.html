@@ -32,10 +32,18 @@
       <section class="popup__section">
         <label class="popup__toggle">
           <span class="popup__toggle-text">
-            <span class="popup__label">Расширение</span>
+            <span class="popup__label">Включить Inpulator</span>
             <span class="popup__hint">Кнопка перевода и горячая клавиша</span>
           </span>
           <input id="enabled-toggle" type="checkbox" role="switch" />
+        </label>
+
+        <label class="popup__toggle">
+          <span class="popup__toggle-text">
+            <span class="popup__label">Включить на этом сайте</span>
+            <span id="site-toggle-hint" class="popup__hint">…</span>
+          </span>
+          <input id="site-toggle" type="checkbox" role="switch" />
         </label>
 
         <label class="popup__toggle">
@@ -91,19 +99,6 @@
           <button id="google-api-key-clear" type="button" class="popup__button" hidden>
             Удалить ключ
           </button>
-        </label>
-
-        <label class="popup__field" for="blocked-domains">
-          <span class="popup__label">Исключённые сайты</span>
-          <textarea
-            id="blocked-domains"
-            class="popup__input"
-            rows="2"
-            placeholder="bank.example, login.example"
-          ></textarea>
-          <span class="popup__hint"
-            >По одному домену через запятую или с новой строки</span
-          >
         </label>
       </section>
     </main>
