@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "test": "node --test test/*.test.js",
     "lint": "eslint .",
     "format:check": "prettier --check \"**/*.{js,json,md,css}\"",
