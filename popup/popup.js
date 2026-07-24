@@ -20,7 +20,10 @@
   const googleApiKey = document.getElementById('google-api-key');
   const googleApiKeyHint = document.getElementById('google-api-key-hint');
   const googleApiKeyClear = document.getElementById('google-api-key-clear');
-  const blockedDomains = document.getElementById('blocked-domains');
+  const siteToggle = document.getElementById('site-toggle');
+  const siteToggleHint = document.getElementById('site-toggle-hint');
+
+  let currentHostname = null;
 
   const PROVIDER_HINTS = {
     chrome:
@@ -67,8 +70,9 @@
     }
 
     const percent = Math.round(Math.min(1, Math.max(0, status.progress || 0)) * 100);
+    const isDownloading = status.downloading || status.availability === 'downloading';
 
-    if (status.downloading) {
+    if (isDownloading) {
       chromeModelValue.textContent = `${percent}%`;
       chromeModelMeter.hidden = false;
       chromeModelBar.style.width = `${percent}%`;
@@ -140,6 +144,23 @@
     }
   }
 
+  function isHostBlocked(host, domains) {
+    return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+  }
+
+  function applySiteToggle(settings) {
+    if (!currentHostname) {
+      siteToggle.checked = true;
+      siteToggle.disabled = true;
+      siteToggleHint.textContent = 'Недоступно для этой страницы';
+      return;
+    }
+
+    siteToggle.disabled = false;
+    siteToggle.checked = !isHostBlocked(currentHostname, settings.blockedDomains);
+    siteToggleHint.textContent = currentHostname;
+  }
+
   function applySettingsToUi(settings) {
     enabledToggle.checked = settings.enabled;
     counterToggle.checked = settings.showCharCounter;
@@ -147,8 +168,20 @@
     applyProviderHint(settings.provider);
     chromeModel.hidden = settings.provider !== 'chrome';
     googleApiKeyField.hidden = settings.provider !== 'google';
-    blockedDomains.value = settings.blockedDomains.join(', ');
+    applySiteToggle(settings);
     if (settings.provider !== 'chrome') stopModelPoll();
+  }
+
+  async function resolveCurrentHostname() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.url) return null;
+      const url = new URL(tab.url);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+      return settingsApi.normalizeDomain(url.hostname) || null;
+    } catch {
+      return null;
+    }
   }
 
   async function loadGoogleApiKeyStatus() {
@@ -159,13 +192,6 @@
     googleApiKeyHint.textContent = apiKey
       ? 'Личный ключ сохранён локально в расширении.'
       : 'Ключ не задан. Google Translate недоступен.';
-  }
-
-  function parseBlockedDomains(value) {
-    return value
-      .split(/[\n,]/)
-      .map((domain) => settingsApi.normalizeDomain(domain))
-      .filter(Boolean);
   }
 
   async function loadQuota() {
@@ -197,6 +223,7 @@
   }
 
   async function init() {
+    currentHostname = await resolveCurrentHostname();
     const settings = await settingsApi.getSettings();
     applySettingsToUi(settings);
     await loadGoogleApiKeyStatus();
@@ -237,10 +264,27 @@
       await loadQuota();
     });
 
-    blockedDomains.addEventListener('change', async () => {
-      const next = await settingsApi.setSettings({
-        blockedDomains: parseBlockedDomains(blockedDomains.value),
-      });
+    siteToggle.addEventListener('change', async () => {
+      if (!currentHostname) {
+        applySiteToggle(await settingsApi.getSettings());
+        return;
+      }
+
+      const current = await settingsApi.getSettings();
+      let blockedDomains;
+
+      if (siteToggle.checked) {
+        blockedDomains = current.blockedDomains.filter(
+          (domain) =>
+            !(currentHostname === domain || currentHostname.endsWith(`.${domain}`))
+        );
+      } else {
+        blockedDomains = current.blockedDomains.includes(currentHostname)
+          ? current.blockedDomains
+          : [...current.blockedDomains, currentHostname];
+      }
+
+      const next = await settingsApi.setSettings({ blockedDomains });
       applySettingsToUi(next);
     });
 

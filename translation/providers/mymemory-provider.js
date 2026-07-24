@@ -18,6 +18,7 @@ export function createMyMemoryProvider({
   fetchImpl = fetch,
   timeoutMs = REQUEST_TIMEOUT_MS,
   email = '',
+  getEmail = async () => email,
 } = {}) {
   const store = storage ?? chrome.storage.local;
   let queue = Promise.resolve();
@@ -53,11 +54,11 @@ export function createMyMemoryProvider({
     await store.set({ [STORAGE_KEY]: record });
   }
 
-  async function fetchChunk(text, { source, target }) {
+  async function fetchChunk(text, { source, target }, currentEmail) {
     const url = new URL(API_URL);
     url.searchParams.set('q', text);
     url.searchParams.set('langpair', `${source}|${target}`);
-    if (email) url.searchParams.set('de', email);
+    if (currentEmail) url.searchParams.set('de', currentEmail);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -104,10 +105,11 @@ export function createMyMemoryProvider({
           );
         }
 
+        const currentEmail = String((await getEmail()) || '').trim();
         const chunks = splitIntoChunks(content, MAX_CHUNK_SIZE);
         let translatedText = '';
         for (const chunk of chunks) {
-          translatedText += `${await fetchChunk(chunk.text, options)}${chunk.separator}`;
+          translatedText += `${await fetchChunk(chunk.text, options, currentEmail)}${chunk.separator}`;
         }
 
         await recordUsage(content.length);

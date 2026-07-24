@@ -6,6 +6,7 @@ import { createMyMemoryProvider } from './providers/mymemory-provider.js';
 import {
   GOOGLE_API_KEY_STORAGE_KEY,
   SETTINGS_KEY,
+  ensureMyMemoryEmail,
   normalizeSettings,
 } from '../settings-defaults.js';
 
@@ -25,9 +26,9 @@ export function createTranslationService({
 
   async function resolvePreferredId() {
     const settings = await getSettings();
-    if (settings.provider === PROVIDER_MYMEMORY) return PROVIDER_MYMEMORY;
+    if (settings.provider === PROVIDER_CHROME) return PROVIDER_CHROME;
     if (settings.provider === PROVIDER_GOOGLE) return PROVIDER_GOOGLE;
-    return PROVIDER_CHROME;
+    return PROVIDER_MYMEMORY;
   }
 
   function getProviderOrThrow(id) {
@@ -92,6 +93,11 @@ async function getGoogleApiKey() {
   return String(data[GOOGLE_API_KEY_STORAGE_KEY] || '').trim();
 }
 
+async function getMyMemoryEmail() {
+  if (typeof chrome === 'undefined' || !chrome.storage?.local) return '';
+  return ensureMyMemoryEmail(chrome.storage.local);
+}
+
 let defaultService = null;
 
 function getDefaultService() {
@@ -100,7 +106,7 @@ function getDefaultService() {
       providers: [
         createChromeProvider({ sendToOffscreen }),
         createGoogleProvider({ getApiKey: getGoogleApiKey }),
-        createMyMemoryProvider(),
+        createMyMemoryProvider({ getEmail: getMyMemoryEmail }),
       ],
     });
   }

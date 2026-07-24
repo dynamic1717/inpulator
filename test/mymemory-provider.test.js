@@ -59,3 +59,27 @@ test('provider reports a timeout when the request is aborted', async () => {
 
   await assert.rejects(provider.translate('тест'), /Превышено время ожидания/);
 });
+
+test('provider passes email as de query param when provided', async () => {
+  let requestedUrl = '';
+  const provider = createMyMemoryProvider({
+    getEmail: async () => 'inpulator-test@example.com',
+    storage: {
+      get: async () => ({}),
+      set: async () => undefined,
+    },
+    fetchImpl: async (url) => {
+      requestedUrl = url.toString();
+      return {
+        ok: true,
+        json: async () => ({
+          responseStatus: 200,
+          responseData: { translatedText: 'translated' },
+        }),
+      };
+    },
+  });
+
+  await provider.translate('тест');
+  assert.match(requestedUrl, /de=inpulator-test%40example\.com/);
+});

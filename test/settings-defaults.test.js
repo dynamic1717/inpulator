@@ -21,6 +21,6 @@ test('normalizes blocked domains and removes duplicates', () => {
 test('uses safe default settings for malformed blocked domains', () => {
   const settings = normalizeSettings({ blockedDomains: 'not-an-array' });
 
-  assert.equal(settings.provider, 'chrome');
+  assert.equal(settings.provider, 'mymemory');
   assert.deepEqual(settings.blockedDomains, []);
 });

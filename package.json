@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "test": "node --test test/*.test.js",
     "lint": "eslint .",
-    "format:check": "prettier --check \"**/*.{js,json,md,css}\""
+    "format:check": "prettier --check \"**/*.{js,json,md,css}\"",
+    "format:fix": "prettier --write \"**/*.{js,json,md,css}\""
   },
   "devDependencies": {
     "eslint": "^9.0.0",

@@ -88,12 +88,12 @@ replace text (native / editable / clipboard)
 Ключ в `chrome.storage.local`:
 
 ```js
-{ enabled: true, showCharCounter: true, provider: 'chrome', blockedDomains: [] }
+{ enabled: true, showCharCounter: true, provider: 'mymemory', blockedDomains: [] }
 ```
 
 - **enabled** — глобальный вкл/выкл: скрывает кнопку, блокирует hotkey; `chrome.action.setIcon` переключает цветные / grayscale иконки
 - **showCharCounter** — показывать ли `выделено/остаток` на плавающей кнопке
-- **provider** — `chrome` (default), `google` или `mymemory`
+- **provider** — `mymemory` (default), `chrome` или `google`
 - **blockedDomains** — домены, где UI перевода не показывается
 - Popup: `action.default_popup` → `popup/popup.html`
 - Изменения применяются через `chrome.storage.onChanged` без reload страницы
@@ -115,7 +115,7 @@ Translation API и квотами проекта Google Cloud.
 
 ## API перевода
 
-### Chrome Translator API (default)
+### Chrome Translator API
 
 On-device через offscreen document (`offscreen/offscreen.js`). Service worker вызывает `Translator` только через messaging.
 
@@ -138,12 +138,13 @@ On-device через offscreen document (`offscreen/offscreen.js`). Service work
 
 ### MyMemory
 
-| Параметр   | Значение                                      |
-| ---------- | --------------------------------------------- |
-| Endpoint   | `GET https://api.mymemory.translated.net/get` |
-| `langpair` | `ru\|en`                                      |
-| Max chunk  | 450 символов                                  |
-| Quota      | Локально 50 000 / день (`dailyUsage`)         |
+| Параметр     | Значение                                                    |
+| ------------ | ----------------------------------------------------------- |
+| Endpoint     | `GET https://api.mymemory.translated.net/get`               |
+| `langpair`   | `ru\|en`                                                    |
+| Max chunk    | 450 символов                                                |
+| Quota        | Локально 50 000 / день (`dailyUsage`)                       |
+| Email (`de`) | Автогенерируется при установке и хранится в `myMemoryEmail` |
 
 ### Выбор провайдера
 
@@ -270,7 +271,7 @@ input-translate-ext/
 
 ### Фаза 6 ✅
 
-- Chrome Translator API (on-device) как default
+- Chrome Translator API (on-device)
 - Offscreen document + permission `offscreen`
 - Выбранный провайдер без автоматического fallback
 

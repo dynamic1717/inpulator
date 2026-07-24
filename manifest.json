@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Inpulator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Перевод выделенного текста в полях ввода с русского языка на английский.",
   "icons": {
     "16": "icons/icon16.png",
@@ -17,7 +17,13 @@
       "128": "icons/icon128.png"
     }
   },
-  "permissions": ["clipboardRead", "clipboardWrite", "storage", "offscreen"],
+  "permissions": [
+    "clipboardRead",
+    "clipboardWrite",
+    "storage",
+    "offscreen",
+    "activeTab"
+  ],
   "host_permissions": [
     "https://api.mymemory.translated.net/*",
     "https://translation.googleapis.com/*"
