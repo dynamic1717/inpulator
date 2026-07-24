@@ -72,10 +72,12 @@ test('service uses selected mymemory provider', async () => {
       enabled: true,
       showCharCounter: true,
       provider: 'mymemory',
+      targetLanguage: 'en',
+      disabledSourceLanguages: [],
     }),
   });
 
-  const result = await service.translate('тест');
+  const result = await service.translate('тест', { sourceLanguage: 'ru' });
   assert.equal(result.translatedText, 'from-mymemory');
   assert.equal(result.provider, 'mymemory');
 });
@@ -88,10 +90,12 @@ test('service uses chrome when selected and available', async () => {
       enabled: true,
       showCharCounter: true,
       provider: 'chrome',
+      targetLanguage: 'en',
+      disabledSourceLanguages: [],
     }),
   });
 
-  const result = await service.translate('тест');
+  const result = await service.translate('тест', { sourceLanguage: 'ru' });
   assert.equal(result.translatedText, 'from-chrome');
   assert.equal(result.provider, 'chrome');
   assert.deepEqual(counts(), { chromeCalls: 1, googleCalls: 0, mymemoryCalls: 0 });
@@ -105,10 +109,15 @@ test('service does not fall back when selected chrome is unavailable', async () 
       enabled: true,
       showCharCounter: true,
       provider: 'chrome',
+      targetLanguage: 'en',
+      disabledSourceLanguages: [],
     }),
   });
 
-  await assert.rejects(service.translate('тест'), /Переводчик Chrome недоступен/);
+  await assert.rejects(
+    service.translate('тест', { sourceLanguage: 'ru' }),
+    /Переводчик Chrome недоступен/
+  );
   assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 0, mymemoryCalls: 0 });
 });
 
@@ -120,10 +129,12 @@ test('service uses selected google provider even when its local quota is exhaust
       enabled: true,
       showCharCounter: true,
       provider: 'google',
+      targetLanguage: 'en',
+      disabledSourceLanguages: [],
     }),
   });
 
-  const result = await service.translate('тест');
+  const result = await service.translate('тест', { sourceLanguage: 'ru' });
   assert.equal(result.translatedText, 'from-google');
   assert.equal(result.provider, 'google');
   assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 1, mymemoryCalls: 0 });
@@ -137,8 +148,38 @@ test('service errors when google is selected without api key', async () => {
       enabled: true,
       showCharCounter: true,
       provider: 'google',
+      targetLanguage: 'en',
+      disabledSourceLanguages: [],
     }),
   });
 
-  await assert.rejects(service.translate('тест'), /Ключ Google API не найден/);
+  await assert.rejects(
+    service.translate('тест', { sourceLanguage: 'ru' }),
+    /Ключ Google API не найден/
+  );
+});
+
+test('service passes mapped language pair to provider', async () => {
+  let received = null;
+  const service = createTranslationService({
+    providers: [
+      {
+        id: 'mymemory',
+        isAvailable: async () => true,
+        translate: async (_text, pair) => {
+          received = pair;
+          return 'ok';
+        },
+        getQuota: async () => null,
+      },
+    ],
+    getSettings: async () => ({
+      provider: 'mymemory',
+      targetLanguage: 'zh',
+      disabledSourceLanguages: [],
+    }),
+  });
+
+  await service.translate('hello', { sourceLanguage: 'en' });
+  assert.deepEqual(received, { source: 'en', target: 'zh-CN' });
 });

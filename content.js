@@ -11,6 +11,7 @@
   let renderedContext = null;
   let isTranslating = false;
   let buttonRenderVersion = 0;
+  let selectionGateVersion = 0;
   let lastHotkeyAt = 0;
   let settings = { ...settingsApi?.DEFAULT_SETTINGS };
   const ui = InputTranslate.floatingUi?.create({ onTranslate: onTranslateClick });
@@ -62,7 +63,7 @@
       settings = { ...settingsApi.DEFAULT_SETTINGS };
     }
 
-    settingsApi.subscribe((next) => {
+    settingsApi.subscribe(async (next) => {
       const providerChanged = next.provider !== settings.provider;
       settings = next;
       if (providerChanged) runtime.invalidateQuotaCache?.();
@@ -70,10 +71,15 @@
         hideButton();
         return;
       }
-      if (activeContext && contextTools.isTranslatable(activeContext)) {
+      if (
+        activeContext &&
+        (await contextTools.isTranslatable(activeContext, settings))
+      ) {
         showButton(
           contextTools.getButtonPosition(activeContext, null, clampToViewport)
         );
+      } else {
+        hideButton();
       }
     });
 
@@ -90,12 +96,31 @@
     }
 
     try {
-      chrome.runtime.onMessage.addListener((message) => {
-        if (message.type === 'TRANSLATE_HOTKEY') onHotkeyTranslate();
+      chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+        if (message.type === 'TRANSLATE_HOTKEY') {
+          onHotkeyTranslate();
+          return;
+        }
+        if (message.type === 'GET_SELECTION_LANGUAGE') {
+          resolveSelectionLanguage()
+            .then((sourceLanguage) => sendResponse({ sourceLanguage }))
+            .catch(() => sendResponse({ sourceLanguage: null }));
+          return true;
+        }
       });
     } catch (error) {
       handleInvalidatedContext(error);
     }
+  }
+
+  async function resolveSelectionLanguage() {
+    if (!isActive() || !contextTools) return null;
+    const context = contextTools.detect();
+    const text = context?.text?.trim();
+    if (!text) return null;
+    return (
+      (await InputTranslate.languageDetect?.resolveSourceLanguage(context)) || null
+    );
   }
 
   function onMacHotkeyKeydown(event) {
@@ -130,14 +155,21 @@
     return { width: Math.max(44, Math.max(52, counter.length * 6.5) + 12), height: 48 };
   }
 
-  function syncButtonWithSelection(event) {
+  async function syncButtonWithSelection(event) {
     if (!isActive()) return notifyReloadNeeded();
     if (!isExtensionEnabled()) return hideButton();
     if (isTranslating || ui.contains(event?.target)) return;
 
+    const gateVersion = ++selectionGateVersion;
+
     try {
       const context = contextTools.detect();
-      if (!contextTools.isTranslatable(context)) return hideButton();
+      if (!context?.text?.trim()) return hideButton();
+      if (contextTools.isSame(renderedContext, context)) return;
+
+      const translatable = await contextTools.isTranslatable(context, settings);
+      if (gateVersion !== selectionGateVersion) return;
+      if (!translatable) return hideButton();
       if (contextTools.isSame(renderedContext, context)) return;
 
       activeContext = contextTools.clone(context);
@@ -157,7 +189,12 @@
     const showCounter = settings.showCharCounter !== false;
     const renderVersion = ++buttonRenderVersion;
     const initialCounter = `${formatCount(selectedChars)}/${formatCount('…')}`;
-    ui.setTranslate(selectedChars, '…', { showCounter });
+    const sourceLanguage =
+      (await InputTranslate.languageDetect?.resolveSourceLanguage(context)) || 'ru';
+    if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
+    const targetLanguage = settings.targetLanguage || 'en';
+    const languageOpts = { showCounter, sourceLanguage, targetLanguage };
+    ui.setTranslate(selectedChars, '…', languageOpts);
     ui.show(
       clampToViewport(
         anchor.x,
@@ -173,7 +210,11 @@
       if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
       if (settings.showCharCounter === false) return;
       const counter = `${formatCount(selectedChars)}/${formatCount(remaining)}`;
-      ui.setTranslate(selectedChars, remaining, { showCounter: true });
+      ui.setTranslate(selectedChars, remaining, {
+        showCounter: true,
+        sourceLanguage,
+        targetLanguage,
+      });
       ui.updatePosition(
         clampToViewport(anchor.x, anchor.y, getButtonDimensions(counter, true))
       );
@@ -184,6 +225,7 @@
 
   function hideButton() {
     buttonRenderVersion += 1;
+    selectionGateVersion += 1;
     ui?.hide();
     renderedContext = null;
     if (!isTranslating) activeContext = null;
@@ -199,10 +241,12 @@
 
     try {
       let context = contextTools.detect();
-      if (!contextTools.isTranslatable(context)) {
+      if (!(await contextTools.isTranslatable(context, settings))) {
         context = await InputTranslate.clipboard?.captureSelectionText();
       }
-      if (contextTools.isTranslatable(context)) await translateSelection(context);
+      if (await contextTools.isTranslatable(context, settings)) {
+        await translateSelection(context);
+      }
     } catch (error) {
       if (!handleInvalidatedContext(error)) throw error;
     }
@@ -220,7 +264,12 @@
     ui.setLoading();
 
     try {
-      const response = await runtime.translate(snapshot.text);
+      const sourceLanguage =
+        (await InputTranslate.languageDetect?.resolveSourceLanguage(snapshot)) || null;
+      if (!sourceLanguage) {
+        throw new Error('Не удалось определить язык текста');
+      }
+      const response = await runtime.translate(snapshot.text, { sourceLanguage });
       if (!contextTools.isCurrent(snapshot)) {
         throw new Error('Выделенный текст изменился; выделите его снова');
       }

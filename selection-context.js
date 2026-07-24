@@ -4,7 +4,6 @@
   if (window.__inputTranslateSelectionContext) return;
 
   window.InputTranslate = window.InputTranslate || {};
-  const CYRILLIC_RE = /[\u0400-\u04FF]/;
 
   function detect() {
     const nativeContext = window.InputTranslate.native?.getNativeContext(
@@ -14,8 +13,12 @@
     return window.InputTranslate.editable?.getEditableContext() || null;
   }
 
-  function isTranslatable(context) {
-    return Boolean(context?.text.trim() && CYRILLIC_RE.test(context.text));
+  async function isTranslatable(context, settings) {
+    const detectApi = window.InputTranslate.languageDetect;
+    if (detectApi?.isTranslatable) {
+      return detectApi.isTranslatable(context, settings);
+    }
+    return Boolean(context?.text?.trim());
   }
 
   function clone(context) {

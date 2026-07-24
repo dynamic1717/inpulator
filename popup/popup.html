@@ -53,7 +53,45 @@
           </span>
           <input id="counter-toggle" type="checkbox" role="switch" />
         </label>
+      </section>
 
+      <section class="popup__section">
+        <label class="popup__field" for="target-language-select">
+          <span class="popup__toggle-text">
+            <span class="popup__label">Переводить на</span>
+            <span class="popup__hint">Целевой язык перевода</span>
+          </span>
+          <select id="target-language-select" class="popup__select"></select>
+        </label>
+
+        <fieldset class="popup__fieldset">
+          <legend class="popup__label">Не переводить с</legend>
+          <p class="popup__hint">Для этих языков кнопка перевода не появится</p>
+          <div id="disabled-source-pills" class="popup__pills" hidden></div>
+          <div id="exclude-current-row" class="popup__exclude-row" hidden>
+            <span id="exclude-current-label" class="popup__exclude-label"></span>
+            <button
+              id="exclude-current-btn"
+              type="button"
+              class="popup__button popup__button--secondary"
+            >
+              Исключить
+            </button>
+          </div>
+          <div id="exclude-select-row" class="popup__exclude-add">
+            <select id="exclude-language-select" class="popup__select"></select>
+            <button
+              id="exclude-language-btn"
+              type="button"
+              class="popup__button popup__button--secondary"
+            >
+              Исключить
+            </button>
+          </div>
+        </fieldset>
+      </section>
+
+      <section class="popup__section">
         <label class="popup__field" for="provider-select">
           <span class="popup__toggle-text">
             <span class="popup__label">Провайдер</span>
@@ -68,7 +106,7 @@
 
         <div id="chrome-model" class="popup__model" hidden>
           <div class="popup__row">
-            <span class="popup__label">Пакеты RU→EN</span>
+            <span id="chrome-model-label" class="popup__label">Языковые пакеты</span>
             <span id="chrome-model-value" class="popup__value">…</span>
           </div>
           <div id="chrome-model-meter" class="popup__meter" hidden>
@@ -102,6 +140,7 @@
         </label>
       </section>
     </main>
+    <script src="../languages.js"></script>
     <script src="../settings.js"></script>
     <script src="popup.js"></script>
   </body>

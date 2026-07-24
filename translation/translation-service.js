@@ -1,5 +1,6 @@
 import { sendToOffscreen } from '../offscreen-manager.js';
 import { DEFAULT_LANGUAGE_PAIR } from './provider.js';
+import { mapLanguageCodes } from './languages.js';
 import { createChromeProvider } from './providers/chrome-provider.js';
 import { createGoogleProvider } from './providers/google-provider.js';
 import { createMyMemoryProvider } from './providers/mymemory-provider.js';
@@ -41,8 +42,16 @@ export function createTranslationService({
     return getProviderOrThrow(await resolvePreferredId());
   }
 
-  async function translateWithProvider(provider, text) {
-    const translatedText = await provider.translate(text, languagePair);
+  async function resolveLanguagePair(sourceLanguage) {
+    const settings = await getSettings();
+    const source = sourceLanguage || languagePair.source;
+    const target = settings.targetLanguage || languagePair.target;
+    return { source, target };
+  }
+
+  async function translateWithProvider(provider, text, pair) {
+    const mapped = mapLanguageCodes(provider.id, pair);
+    const translatedText = await provider.translate(text, mapped);
     return {
       translatedText,
       provider: provider.id,
@@ -51,11 +60,18 @@ export function createTranslationService({
   }
 
   return {
-    async translate(text) {
+    async translate(text, { sourceLanguage } = {}) {
       const preferredId = await resolvePreferredId();
-
       const provider = getProviderOrThrow(preferredId);
-      if (!(await provider.isAvailable())) {
+      const pair = await resolveLanguagePair(sourceLanguage);
+      const mappedPair = mapLanguageCodes(preferredId, pair);
+
+      const available =
+        typeof provider.isAvailable === 'function'
+          ? await provider.isAvailable(mappedPair)
+          : true;
+
+      if (!available) {
         if (preferredId === PROVIDER_GOOGLE) {
           throw new Error(
             'Ключ Google API не найден. Добавьте его в настройках расширения.'
@@ -63,13 +79,13 @@ export function createTranslationService({
         }
         if (preferredId === PROVIDER_CHROME) {
           throw new Error(
-            'Переводчик Chrome недоступен. Скачайте пакет RU→EN или выберите другого провайдера.'
+            `Переводчик Chrome недоступен. Скачайте пакет ${mappedPair.source}→${mappedPair.target} или выберите другого провайдера.`
           );
         }
         throw new Error(`Провайдер ${provider.id} недоступен`);
       }
 
-      return translateWithProvider(provider, text);
+      return translateWithProvider(provider, text, pair);
     },
     async getQuota() {
       const provider = await getSelectedProvider();
@@ -113,8 +129,8 @@ function getDefaultService() {
   return defaultService;
 }
 
-export function translate(text) {
-  return getDefaultService().translate(text);
+export function translate(text, options) {
+  return getDefaultService().translate(text, options);
 }
 
 export function getQuota() {

@@ -2,8 +2,17 @@
   'use strict';
 
   const settingsApi = window.InputTranslate.settings;
+  const languagesApi = window.InputTranslate.languages;
   const enabledToggle = document.getElementById('enabled-toggle');
   const counterToggle = document.getElementById('counter-toggle');
+  const targetLanguageSelect = document.getElementById('target-language-select');
+  const disabledSourcePills = document.getElementById('disabled-source-pills');
+  const excludeCurrentRow = document.getElementById('exclude-current-row');
+  const excludeCurrentLabel = document.getElementById('exclude-current-label');
+  const excludeCurrentBtn = document.getElementById('exclude-current-btn');
+  const excludeSelectRow = document.getElementById('exclude-select-row');
+  const excludeLanguageSelect = document.getElementById('exclude-language-select');
+  const excludeLanguageBtn = document.getElementById('exclude-language-btn');
   const providerSelect = document.getElementById('provider-select');
   const providerHint = document.getElementById('provider-hint');
   const quotaLabel = document.getElementById('quota-label');
@@ -11,6 +20,7 @@
   const quotaBar = document.getElementById('quota-bar');
   const quotaMeter = quotaBar.parentElement;
   const chromeModel = document.getElementById('chrome-model');
+  const chromeModelLabel = document.getElementById('chrome-model-label');
   const chromeModelValue = document.getElementById('chrome-model-value');
   const chromeModelMeter = document.getElementById('chrome-model-meter');
   const chromeModelBar = document.getElementById('chrome-model-bar');
@@ -24,6 +34,8 @@
   const siteToggleHint = document.getElementById('site-toggle-hint');
 
   let currentHostname = null;
+  let currentSettings = null;
+  let selectionSourceLanguage = null;
 
   const PROVIDER_HINTS = {
     chrome:
@@ -36,6 +48,151 @@
   function applyProviderHint(provider) {
     providerHint.hidden = false;
     providerHint.textContent = PROVIDER_HINTS[provider] || PROVIDER_HINTS.chrome;
+  }
+
+  function formatLanguageLabel(lang) {
+    return `${lang.flag} ${lang.name}`;
+  }
+
+  function pairLabel(sourceCode, targetCode) {
+    const source =
+      languagesApi.getShortLabel?.(sourceCode) || String(sourceCode).toUpperCase();
+    const target =
+      languagesApi.getShortLabel?.(targetCode) || String(targetCode).toUpperCase();
+    return `${source}→${target}`;
+  }
+
+  function getProbePair(settings) {
+    return languagesApi.getChromeProbePair(
+      settings?.targetLanguage || 'en',
+      selectionSourceLanguage
+    );
+  }
+
+  function populateTargetLanguageSelect() {
+    targetLanguageSelect.innerHTML = '';
+    for (const lang of languagesApi.getShippedLanguages()) {
+      const option = document.createElement('option');
+      option.value = lang.id;
+      option.textContent = formatLanguageLabel(lang);
+      targetLanguageSelect.appendChild(option);
+    }
+  }
+
+  function getExcludableLanguages(settings) {
+    const disabled = new Set(settings.disabledSourceLanguages || []);
+    return languagesApi.getShippedLanguages().filter((lang) => !disabled.has(lang.id));
+  }
+
+  function renderDisabledSourcePills(settings) {
+    const disabledIds = settings.disabledSourceLanguages || [];
+    disabledSourcePills.innerHTML = '';
+    disabledSourcePills.hidden = disabledIds.length === 0;
+
+    for (const id of disabledIds) {
+      const lang = languagesApi.getLanguage(id);
+      if (!lang) continue;
+
+      const pill = document.createElement('span');
+      pill.className = 'popup__pill';
+
+      const text = document.createElement('span');
+      text.className = 'popup__pill-text';
+      text.textContent = formatLanguageLabel(lang);
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'popup__pill-remove';
+      remove.setAttribute('aria-label', `Включить ${lang.name}`);
+      remove.textContent = '×';
+      remove.addEventListener('click', () => removeDisabledSource(id));
+
+      pill.append(text, remove);
+      disabledSourcePills.appendChild(pill);
+    }
+  }
+
+  function populateExcludeLanguageSelect(settings) {
+    const previous = excludeLanguageSelect.value;
+    const options = getExcludableLanguages(settings).filter(
+      (lang) => lang.id !== selectionSourceLanguage
+    );
+
+    excludeLanguageSelect.innerHTML = '';
+    for (const lang of options) {
+      const option = document.createElement('option');
+      option.value = lang.id;
+      option.textContent = formatLanguageLabel(lang);
+      excludeLanguageSelect.appendChild(option);
+    }
+
+    if (options.some((lang) => lang.id === previous)) {
+      excludeLanguageSelect.value = previous;
+    }
+
+    const hasOptions = options.length > 0;
+    excludeLanguageSelect.disabled = !hasOptions;
+    excludeLanguageBtn.disabled = !hasOptions;
+    excludeSelectRow.hidden = !hasOptions && Boolean(selectionSourceLanguage);
+  }
+
+  function updateExcludeCurrentRow(settings) {
+    const lang = selectionSourceLanguage
+      ? languagesApi.getLanguage(selectionSourceLanguage)
+      : null;
+    const disabled = new Set(settings.disabledSourceLanguages || []);
+    const canExclude = Boolean(lang) && !disabled.has(lang.id);
+
+    excludeCurrentRow.hidden = !canExclude;
+    if (!canExclude) return;
+
+    excludeCurrentLabel.textContent = `Сейчас: ${formatLanguageLabel(lang)}`;
+    excludeCurrentBtn.disabled = false;
+  }
+
+  function renderDisabledSourcesUi(settings) {
+    renderDisabledSourcePills(settings);
+    updateExcludeCurrentRow(settings);
+    populateExcludeLanguageSelect(settings);
+  }
+
+  async function addDisabledSource(languageId) {
+    if (!languageId || !languagesApi.isShippedLanguageId(languageId)) return;
+    const current = currentSettings || (await settingsApi.getSettings());
+    if (current.disabledSourceLanguages.includes(languageId)) {
+      renderDisabledSourcesUi(current);
+      return;
+    }
+    const next = await settingsApi.setSettings({
+      disabledSourceLanguages: [...current.disabledSourceLanguages, languageId],
+    });
+    applySettingsToUi(next);
+  }
+
+  async function removeDisabledSource(languageId) {
+    const current = currentSettings || (await settingsApi.getSettings());
+    const next = await settingsApi.setSettings({
+      disabledSourceLanguages: current.disabledSourceLanguages.filter(
+        (id) => id !== languageId
+      ),
+    });
+    applySettingsToUi(next);
+  }
+
+  async function resolveSelectionSourceLanguage() {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id || !tab.url) return null;
+      const url = new URL(tab.url);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        type: 'GET_SELECTION_LANGUAGE',
+      });
+      const id = languagesApi.normalizeLanguageId(response?.sourceLanguage);
+      return id;
+    } catch {
+      return null;
+    }
   }
 
   let modelPollTimer = null;
@@ -59,7 +216,10 @@
     }, 500);
   }
 
-  function applyChromeModelStatus(status) {
+  function applyChromeModelStatus(status, probe) {
+    const label = pairLabel(probe.source, probe.target);
+    chromeModelLabel.textContent = `Пакеты ${label}`;
+
     if (!status) {
       chromeModelValue.textContent = '…';
       chromeModelMeter.hidden = true;
@@ -100,7 +260,7 @@
       chromeModelDownload.hidden = false;
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Нужны для on-device перевода RU→EN';
+      chromeModelHint.textContent = `Нужны для on-device перевода ${label}`;
       return;
     }
 
@@ -108,7 +268,7 @@
       chromeModelValue.textContent = 'Недоступны';
       chromeModelDownload.hidden = true;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = status.error || 'Пара RU→EN не поддерживается';
+      chromeModelHint.textContent = status.error || `Пара ${label} не поддерживается`;
       return;
     }
 
@@ -126,20 +286,26 @@
       return;
     }
 
+    const probe = getProbePair(currentSettings || { targetLanguage: 'en' });
     chromeModel.hidden = false;
     try {
       const status = await chrome.runtime.sendMessage({
         type: 'GET_CHROME_MODEL_STATUS',
+        sourceLanguage: probe.source,
+        targetLanguage: probe.target,
       });
-      applyChromeModelStatus(status);
+      applyChromeModelStatus(status, probe);
     } catch (error) {
       if (!silent) {
-        applyChromeModelStatus({
-          availability: 'unsupported',
-          downloading: false,
-          progress: 0,
-          error: error.message,
-        });
+        applyChromeModelStatus(
+          {
+            availability: 'unsupported',
+            downloading: false,
+            progress: 0,
+            error: error.message,
+          },
+          probe
+        );
       }
     }
   }
@@ -162,8 +328,11 @@
   }
 
   function applySettingsToUi(settings) {
+    currentSettings = settings;
     enabledToggle.checked = settings.enabled;
     counterToggle.checked = settings.showCharCounter;
+    targetLanguageSelect.value = settings.targetLanguage;
+    renderDisabledSourcesUi(settings);
     providerSelect.value = settings.provider;
     applyProviderHint(settings.provider);
     chromeModel.hidden = settings.provider !== 'chrome';
@@ -223,7 +392,9 @@
   }
 
   async function init() {
+    populateTargetLanguageSelect();
     currentHostname = await resolveCurrentHostname();
+    selectionSourceLanguage = await resolveSelectionSourceLanguage();
     const settings = await settingsApi.getSettings();
     applySettingsToUi(settings);
     await loadGoogleApiKeyStatus();
@@ -240,6 +411,23 @@
         showCharCounter: counterToggle.checked,
       });
       applySettingsToUi(next);
+    });
+
+    targetLanguageSelect.addEventListener('change', async () => {
+      const next = await settingsApi.setSettings({
+        targetLanguage: targetLanguageSelect.value,
+      });
+      applySettingsToUi(next);
+      await loadChromeModelStatus();
+    });
+
+    excludeCurrentBtn.addEventListener('click', async () => {
+      if (!selectionSourceLanguage) return;
+      await addDisabledSource(selectionSourceLanguage);
+    });
+
+    excludeLanguageBtn.addEventListener('click', async () => {
+      await addDisabledSource(excludeLanguageSelect.value);
     });
 
     providerSelect.addEventListener('change', async () => {
@@ -289,6 +477,7 @@
     });
 
     chromeModelDownload.addEventListener('click', async () => {
+      const probe = getProbePair(currentSettings || { targetLanguage: 'en' });
       chromeModelDownload.disabled = true;
       chromeModelValue.textContent = '0%';
       chromeModelMeter.hidden = false;
@@ -299,15 +488,20 @@
       try {
         const status = await chrome.runtime.sendMessage({
           type: 'ENSURE_CHROME_MODEL',
+          sourceLanguage: probe.source,
+          targetLanguage: probe.target,
         });
-        applyChromeModelStatus(status);
+        applyChromeModelStatus(status, probe);
       } catch (error) {
-        applyChromeModelStatus({
-          availability: 'downloadable',
-          downloading: false,
-          progress: 0,
-          error: error.message,
-        });
+        applyChromeModelStatus(
+          {
+            availability: 'downloadable',
+            downloading: false,
+            progress: 0,
+            error: error.message,
+          },
+          probe
+        );
         chromeModelHint.hidden = false;
         chromeModelHint.textContent = error.message || 'Не удалось скачать пакеты';
         chromeModelDownload.hidden = false;
@@ -322,7 +516,10 @@
       ) {
         return;
       }
-      applyChromeModelStatus(message.status);
+      applyChromeModelStatus(
+        message.status,
+        getProbePair(currentSettings || { targetLanguage: 'en' })
+      );
     });
 
     settingsApi.subscribe((next) => {

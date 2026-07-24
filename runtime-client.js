@@ -32,8 +32,12 @@
     return quota?.remaining ?? null;
   }
 
-  async function translate(text) {
-    const response = await sendMessage({ type: 'TRANSLATE', text });
+  async function translate(text, { sourceLanguage } = {}) {
+    const response = await sendMessage({
+      type: 'TRANSLATE',
+      text,
+      sourceLanguage,
+    });
     quotaCache = response.quota || null;
     quotaCacheExpiresAt = Date.now() + QUOTA_CACHE_TTL;
     return response;

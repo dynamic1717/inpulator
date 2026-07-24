@@ -1,5 +1,11 @@
 /** Shared settings key and defaults for ES-module contexts (background). */
 
+import {
+  getShippedLanguageIds,
+  isShippedLanguageId,
+  normalizeLanguageId,
+} from './translation/languages.js';
+
 export const SETTINGS_KEY = 'extensionSettings';
 export const GOOGLE_API_KEY_STORAGE_KEY = 'googleTranslateApiKey';
 export const MYMEMORY_EMAIL_STORAGE_KEY = 'myMemoryEmail';
@@ -9,6 +15,8 @@ export const DEFAULT_SETTINGS = {
   showCharCounter: true,
   provider: 'mymemory',
   blockedDomains: [],
+  targetLanguage: 'en',
+  disabledSourceLanguages: [],
 };
 
 export function generateMyMemoryEmail() {
@@ -28,6 +36,16 @@ export async function ensureMyMemoryEmail(storage = chrome.storage.local) {
   return email;
 }
 
+function normalizeDisabledSourceLanguages(raw) {
+  if (!Array.isArray(raw)) return [];
+  const shipped = new Set(getShippedLanguageIds());
+  return [
+    ...new Set(
+      raw.map((id) => normalizeLanguageId(id)).filter((id) => id && shipped.has(id))
+    ),
+  ];
+}
+
 export function normalizeSettings(raw) {
   const provider =
     raw?.provider === 'chrome' || raw?.provider === 'google'
@@ -36,12 +54,19 @@ export function normalizeSettings(raw) {
   const blockedDomains = Array.isArray(raw?.blockedDomains)
     ? [...new Set(raw.blockedDomains.map(normalizeDomain).filter(Boolean))]
     : [];
+  const targetLanguage = isShippedLanguageId(raw?.targetLanguage)
+    ? raw.targetLanguage
+    : 'en';
 
   return {
     enabled: raw?.enabled !== false,
     showCharCounter: raw?.showCharCounter !== false,
     provider,
     blockedDomains,
+    targetLanguage,
+    disabledSourceLanguages: normalizeDisabledSourceLanguages(
+      raw?.disabledSourceLanguages
+    ),
   };
 }
 

@@ -68,10 +68,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === 'GET_CHROME_MODEL_STATUS') {
+    const sourceLanguage = message.sourceLanguage || 'ru';
+    const targetLanguage = message.targetLanguage || 'en';
     sendToOffscreen({
       type: 'OFFSCREEN_MODEL_STATUS',
-      sourceLanguage: 'ru',
-      targetLanguage: 'en',
+      sourceLanguage,
+      targetLanguage,
     })
       .then((response) => sendResponse(response?.status || response))
       .catch((error) =>
@@ -86,10 +88,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === 'ENSURE_CHROME_MODEL') {
+    const sourceLanguage = message.sourceLanguage || 'ru';
+    const targetLanguage = message.targetLanguage || 'en';
     sendToOffscreen({
       type: 'OFFSCREEN_ENSURE_MODEL',
-      sourceLanguage: 'ru',
-      targetLanguage: 'en',
+      sourceLanguage,
+      targetLanguage,
     })
       .then((response) => sendResponse(response?.status || response))
       .catch((error) =>
@@ -121,7 +125,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type !== 'TRANSLATE') return;
 
-  translate(message.text)
+  translate(message.text, { sourceLanguage: message.sourceLanguage })
     .then(sendResponse)
     .catch((error) => sendResponse({ error: error.message || 'Перевод не удался' }));
   return true;

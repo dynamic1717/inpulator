@@ -9,21 +9,25 @@ export function createChromeProvider({
     throw new Error('createChromeProvider requires sendToOffscreen');
   }
 
-  async function checkAvailability() {
+  async function checkAvailability(pair = languagePair) {
     const response = await sendToOffscreen({
       type: 'OFFSCREEN_AVAILABILITY',
-      sourceLanguage: languagePair.source,
-      targetLanguage: languagePair.target,
+      sourceLanguage: pair.source,
+      targetLanguage: pair.target,
     });
     return response?.availability;
   }
 
   return {
     id: 'chrome',
-    async isAvailable() {
+    async isAvailable(pair = languagePair) {
       try {
-        const availability = await checkAvailability();
-        return availability === 'available';
+        const availability = await checkAvailability(pair);
+        return (
+          availability === 'available' ||
+          availability === 'downloadable' ||
+          availability === 'downloading'
+        );
       } catch {
         return false;
       }
