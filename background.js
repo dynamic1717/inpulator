@@ -13,12 +13,6 @@ const COLOR_ICONS = {
   128: 'icons/icon128.png',
 };
 
-const DISABLED_ICONS = {
-  16: 'icons/icon16-disabled.png',
-  48: 'icons/icon48-disabled.png',
-  128: 'icons/icon128-disabled.png',
-};
-
 async function getSettings() {
   const data = await chrome.storage.local.get(SETTINGS_KEY);
   return normalizeSettings(data[SETTINGS_KEY]);
@@ -26,10 +20,10 @@ async function getSettings() {
 
 async function applyActionIcon(enabled) {
   await chrome.action.setIcon({
-    path: enabled ? COLOR_ICONS : DISABLED_ICONS,
+    path: COLOR_ICONS,
   });
   await chrome.action.setTitle({
-    title: enabled ? 'Inpulator — Перевод текста' : 'Inpulator — выключено',
+    title: enabled ? 'Inpulator — Translate input' : 'Inpulator — disabled',
   });
 }
 
