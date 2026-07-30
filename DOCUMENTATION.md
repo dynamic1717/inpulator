@@ -122,7 +122,6 @@ replace text (native / editable / clipboard)
 ```js
 {
   enabled: true,
-  showCharCounter: true,
   provider: 'mymemory',
   blockedDomains: [],
   targetLanguage: 'en',
@@ -131,7 +130,6 @@ replace text (native / editable / clipboard)
 ```
 
 - **enabled** — глобальный вкл/выкл; `chrome.action.setIcon` переключает цветные / grayscale иконки
-- **showCharCounter** — показывать ли `выделено/остаток` на плавающей кнопке
 - **provider** — `mymemory` (default), `chrome` или `google`
 - **blockedDomains** — домены, где UI перевода не показывается (toggle «На этом сайте» в popup)
 - **targetLanguage** — канонический id целевого языка

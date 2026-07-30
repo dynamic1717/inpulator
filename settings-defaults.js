@@ -12,7 +12,6 @@ export const MYMEMORY_EMAIL_STORAGE_KEY = 'myMemoryEmail';
 
 export const DEFAULT_SETTINGS = {
   enabled: true,
-  showCharCounter: true,
   provider: 'mymemory',
   blockedDomains: [],
   targetLanguage: 'en',
@@ -60,7 +59,6 @@ export function normalizeSettings(raw) {
 
   return {
     enabled: raw?.enabled !== false,
-    showCharCounter: raw?.showCharCounter !== false,
     provider,
     blockedDomains,
     targetLanguage,

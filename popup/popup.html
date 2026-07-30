@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,136 +9,203 @@
   <body>
     <main class="popup">
       <header class="popup__header">
-        <img
-          class="popup__logo"
-          src="../icons/icon48.png"
-          alt=""
-          width="28"
-          height="28"
-        />
-        <h1 class="popup__title">Inpulator</h1>
+        <div class="popup__brand">
+          <img
+            class="popup__logo"
+            src="../icons/icon48.png"
+            alt=""
+            width="22"
+            height="22"
+          />
+          <h1 class="popup__title">Inpulator</h1>
+        </div>
+        <div class="popup__quota" aria-labelledby="quota-label">
+          <span id="quota-label" class="popup__quota-label">Used</span>
+          <span id="quota-value" class="popup__mono popup__quota-value">… / …</span>
+        </div>
       </header>
+      <div class="popup__meter popup__meter--thin" aria-hidden="true">
+        <div id="quota-bar" class="popup__meter-bar"></div>
+      </div>
 
-      <section class="popup__section" aria-labelledby="quota-label">
-        <div class="popup__row">
-          <span id="quota-label" class="popup__label">Лимит</span>
-          <span id="quota-value" class="popup__value">… / …</span>
-        </div>
-        <div class="popup__meter" aria-hidden="true">
-          <div id="quota-bar" class="popup__meter-bar"></div>
-        </div>
-      </section>
+      <label class="popup__block popup__toggle">
+        <span class="popup__toggle-text">
+          <span class="popup__label">Translate button</span>
+          <span class="popup__hint">Show it near selected text, everywhere.</span>
+        </span>
+        <input id="enabled-toggle" type="checkbox" role="switch" />
+      </label>
 
-      <section class="popup__section">
-        <label class="popup__toggle">
-          <span class="popup__toggle-text">
-            <span class="popup__label">Включить Inpulator</span>
-            <span class="popup__hint">Кнопка перевода и горячая клавиша</span>
-          </span>
-          <input id="enabled-toggle" type="checkbox" role="switch" />
-        </label>
+      <label class="popup__block popup__toggle">
+        <span class="popup__toggle-text">
+          <span class="popup__label">This site</span>
+          <span id="site-toggle-hint" class="popup__hint popup__mono">…</span>
+        </span>
+        <input id="site-toggle" type="checkbox" role="switch" />
+      </label>
 
-        <label class="popup__toggle">
-          <span class="popup__toggle-text">
-            <span class="popup__label">Включить на этом сайте</span>
-            <span id="site-toggle-hint" class="popup__hint">…</span>
-          </span>
-          <input id="site-toggle" type="checkbox" role="switch" />
-        </label>
-
-        <label class="popup__toggle">
-          <span class="popup__toggle-text">
-            <span class="popup__label">Счётчик на кнопке</span>
-            <span class="popup__hint">Показывать выделено / остаток</span>
-          </span>
-          <input id="counter-toggle" type="checkbox" role="switch" />
-        </label>
-      </section>
-
-      <section class="popup__section">
-        <label class="popup__field" for="target-language-select">
-          <span class="popup__toggle-text">
-            <span class="popup__label">Переводить на</span>
-            <span class="popup__hint">Целевой язык перевода</span>
-          </span>
-          <select id="target-language-select" class="popup__select"></select>
-        </label>
-
-        <fieldset class="popup__fieldset">
-          <legend class="popup__label">Не переводить с</legend>
-          <p class="popup__hint">Для этих языков кнопка перевода не появится</p>
-          <div id="disabled-source-pills" class="popup__pills" hidden></div>
-          <div id="exclude-current-row" class="popup__exclude-row" hidden>
-            <span id="exclude-current-label" class="popup__exclude-label"></span>
+      <div class="popup__block">
+        <div class="popup__field">
+          <span class="popup__label" id="target-language-label">Translate to</span>
+          <div class="popup__dropdown-wrap">
             <button
-              id="exclude-current-btn"
               type="button"
-              class="popup__button popup__button--secondary"
+              id="target-language-trigger"
+              class="popup__select popup__dropdown-trigger"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-labelledby="target-language-label"
+              aria-controls="target-language-list"
             >
-              Исключить
+              <span id="target-language-value"></span>
+            </button>
+            <ul
+              id="target-language-list"
+              class="popup__combobox-list"
+              role="listbox"
+              aria-labelledby="target-language-label"
+              hidden
+            ></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="popup__block">
+        <div class="popup__field">
+          <span class="popup__label" id="provider-label">Provider</span>
+          <div
+            class="popup__segments"
+            role="radiogroup"
+            aria-labelledby="provider-label"
+          >
+            <button
+              type="button"
+              class="popup__segment"
+              role="radio"
+              aria-checked="false"
+              data-provider="mymemory"
+              id="provider-mymemory"
+            >
+              MyMemory
+            </button>
+            <button
+              type="button"
+              class="popup__segment"
+              role="radio"
+              aria-checked="false"
+              data-provider="chrome"
+              id="provider-chrome"
+            >
+              On-device
+            </button>
+            <button
+              type="button"
+              class="popup__segment"
+              role="radio"
+              aria-checked="false"
+              data-provider="google"
+              id="provider-google"
+            >
+              Google
             </button>
           </div>
-          <div id="exclude-select-row" class="popup__exclude-add">
-            <select id="exclude-language-select" class="popup__select"></select>
-            <button
-              id="exclude-language-btn"
-              type="button"
-              class="popup__button popup__button--secondary"
-            >
-              Исключить
-            </button>
-          </div>
-        </fieldset>
-      </section>
-
-      <section class="popup__section">
-        <label class="popup__field" for="provider-select">
-          <span class="popup__toggle-text">
-            <span class="popup__label">Провайдер</span>
-          </span>
-          <select id="provider-select" class="popup__select">
-            <option value="mymemory">MyMemory</option>
-            <option value="chrome">Chrome</option>
-            <option value="google">Google Translate</option>
-          </select>
           <span id="provider-hint" class="popup__hint"></span>
-        </label>
+        </div>
 
         <div id="chrome-model" class="popup__model" hidden>
           <div class="popup__row">
-            <span id="chrome-model-label" class="popup__label">Языковые пакеты</span>
-            <span id="chrome-model-value" class="popup__value">…</span>
+            <span id="chrome-model-label" class="popup__label">Language packs</span>
+            <span id="chrome-model-value" class="popup__mono popup__value">…</span>
           </div>
           <div id="chrome-model-meter" class="popup__meter" hidden>
             <div id="chrome-model-bar" class="popup__meter-bar"></div>
           </div>
           <p id="chrome-model-hint" class="popup__hint" hidden></p>
           <button id="chrome-model-download" type="button" class="popup__button" hidden>
-            Скачать пакеты
+            Download packs
           </button>
         </div>
 
-        <label
-          id="google-api-key-field"
-          class="popup__field"
-          for="google-api-key"
-          hidden
-        >
-          <span class="popup__label">Google API key</span>
-          <input
-            id="google-api-key"
-            class="popup__input"
-            type="password"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Введите личный ключ"
-          />
-          <span id="google-api-key-hint" class="popup__hint"></span>
-          <button id="google-api-key-clear" type="button" class="popup__button" hidden>
-            Удалить ключ
+        <div id="google-api-key-field" class="popup__field" hidden>
+          <label class="popup__label" for="google-api-key">Google API key</label>
+          <div class="popup__input-wrap">
+            <input
+              id="google-api-key"
+              class="popup__input"
+              type="password"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Paste your Google API key"
+            />
+            <button
+              id="google-api-key-clear"
+              type="button"
+              class="popup__input-action"
+              aria-label="Remove API key"
+              hidden
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <details class="popup__advanced">
+        <summary class="popup__advanced-summary">
+          <span class="popup__advanced-title">
+            <span class="popup__label">Advanced</span>
+            <span class="popup__chevron" aria-hidden="true"></span>
+          </span>
+          <span class="popup__hint">Skip languages or change the shortcut.</span>
+        </summary>
+
+        <div class="popup__advanced-body">
+          <fieldset class="popup__fieldset">
+            <legend class="popup__label">Skip languages</legend>
+            <p class="popup__hint">
+              The button won't appear when selected text is in these languages.
+            </p>
+
+            <div id="skip-suggest" class="popup__suggest" hidden>
+              <span class="popup__suggest-label">Detected in this input:</span>
+              <button id="skip-suggest-chip" type="button" class="popup__suggest-chip">
+                <span class="popup__suggest-plus" aria-hidden="true">+</span>
+                <span id="skip-suggest-text"></span>
+              </button>
+            </div>
+
+            <div class="popup__combobox-wrap">
+              <div class="popup__combobox" id="skip-combobox">
+                <div id="disabled-source-pills" class="popup__pills"></div>
+                <input
+                  id="skip-language-input"
+                  class="popup__combobox-input"
+                  type="text"
+                  placeholder="Add a language..."
+                  autocomplete="off"
+                  spellcheck="false"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded="false"
+                  aria-controls="skip-language-list"
+                />
+              </div>
+              <ul
+                id="skip-language-list"
+                class="popup__combobox-list"
+                role="listbox"
+                hidden
+              ></ul>
+            </div>
+
+            <p class="popup__hint">Type to search or pick from the suggestion above.</p>
+          </fieldset>
+
+          <button id="shortcut-link" type="button" class="popup__link-button">
+            Change shortcut
           </button>
-        </label>
-      </section>
+        </div>
+      </details>
     </main>
     <script src="../languages.js"></script>
     <script src="../settings.js"></script>

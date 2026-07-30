@@ -144,15 +144,8 @@
     };
   }
 
-  function formatCount(value) {
-    if (value === '…') return '…';
-    if (value == null) return '∞';
-    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  }
-
-  function getButtonDimensions(counter, showCounter) {
-    if (!showCounter) return { width: 40, height: 40 };
-    return { width: Math.max(44, Math.max(52, counter.length * 6.5) + 12), height: 48 };
+  function getButtonDimensions() {
+    return { width: 44, height: 44 };
   }
 
   async function syncButtonWithSelection(event) {
@@ -185,39 +178,23 @@
 
     const context = activeContext;
     if (!context) return;
-    const selectedChars = context.text.length;
-    const showCounter = settings.showCharCounter !== false;
     const renderVersion = ++buttonRenderVersion;
-    const initialCounter = `${formatCount(selectedChars)}/${formatCount('…')}`;
     const sourceLanguage =
       (await InputTranslate.languageDetect?.resolveSourceLanguage(context)) || 'ru';
     if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
     const targetLanguage = settings.targetLanguage || 'en';
-    const languageOpts = { showCounter, sourceLanguage, targetLanguage };
-    ui.setTranslate(selectedChars, '…', languageOpts);
-    ui.show(
-      clampToViewport(
-        anchor.x,
-        anchor.y,
-        getButtonDimensions(initialCounter, showCounter)
-      )
-    );
-
-    if (!showCounter) return;
+    ui.setTranslate({ sourceLanguage, targetLanguage });
+    ui.show(clampToViewport(anchor.x, anchor.y, getButtonDimensions()));
 
     try {
-      const remaining = await runtime.getQuotaRemaining();
+      const quota = await runtime.getQuota();
       if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
-      if (settings.showCharCounter === false) return;
-      const counter = `${formatCount(selectedChars)}/${formatCount(remaining)}`;
-      ui.setTranslate(selectedChars, remaining, {
-        showCounter: true,
+      ui.setTranslate({
         sourceLanguage,
         targetLanguage,
+        quota,
       });
-      ui.updatePosition(
-        clampToViewport(anchor.x, anchor.y, getButtonDimensions(counter, true))
-      );
+      ui.updatePosition(clampToViewport(anchor.x, anchor.y, getButtonDimensions()));
     } catch (error) {
       if (!handleInvalidatedContext(error)) return;
     }

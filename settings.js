@@ -9,7 +9,6 @@
   const GOOGLE_API_KEY_STORAGE_KEY = 'googleTranslateApiKey';
   const DEFAULT_SETTINGS = {
     enabled: true,
-    showCharCounter: true,
     provider: 'mymemory',
     blockedDomains: [],
     targetLanguage: 'en',
@@ -59,7 +58,6 @@
 
     return {
       enabled: raw?.enabled !== false,
-      showCharCounter: raw?.showCharCounter !== false,
       provider,
       blockedDomains,
       targetLanguage,

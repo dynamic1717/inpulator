@@ -21,14 +21,19 @@
     quotaCacheExpiresAt = 0;
   }
 
-  async function getQuotaRemaining({ force = false } = {}) {
+  async function getQuota({ force = false } = {}) {
     if (!force && quotaCache && Date.now() < quotaCacheExpiresAt) {
-      return quotaCache.remaining;
+      return quotaCache;
     }
 
     const quota = await sendMessage({ type: 'GET_QUOTA' });
     quotaCache = quota;
     quotaCacheExpiresAt = Date.now() + QUOTA_CACHE_TTL;
+    return quota;
+  }
+
+  async function getQuotaRemaining({ force = false } = {}) {
+    const quota = await getQuota({ force });
     return quota?.remaining ?? null;
   }
 
@@ -44,6 +49,7 @@
   }
 
   window.InputTranslate.runtimeClient = {
+    getQuota,
     getQuotaRemaining,
     invalidateQuotaCache,
     translate,

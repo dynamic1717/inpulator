@@ -70,7 +70,6 @@ test('service uses selected mymemory provider', async () => {
     providers,
     getSettings: async () => ({
       enabled: true,
-      showCharCounter: true,
       provider: 'mymemory',
       targetLanguage: 'en',
       disabledSourceLanguages: [],
@@ -88,7 +87,6 @@ test('service uses chrome when selected and available', async () => {
     providers,
     getSettings: async () => ({
       enabled: true,
-      showCharCounter: true,
       provider: 'chrome',
       targetLanguage: 'en',
       disabledSourceLanguages: [],
@@ -107,7 +105,6 @@ test('service does not fall back when selected chrome is unavailable', async () 
     providers,
     getSettings: async () => ({
       enabled: true,
-      showCharCounter: true,
       provider: 'chrome',
       targetLanguage: 'en',
       disabledSourceLanguages: [],
@@ -127,7 +124,6 @@ test('service uses selected google provider even when its local quota is exhaust
     providers,
     getSettings: async () => ({
       enabled: true,
-      showCharCounter: true,
       provider: 'google',
       targetLanguage: 'en',
       disabledSourceLanguages: [],
@@ -146,7 +142,6 @@ test('service errors when google is selected without api key', async () => {
     providers,
     getSettings: async () => ({
       enabled: true,
-      showCharCounter: true,
       provider: 'google',
       targetLanguage: 'en',
       disabledSourceLanguages: [],

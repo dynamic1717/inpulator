@@ -4,21 +4,23 @@
   const settingsApi = window.InputTranslate.settings;
   const languagesApi = window.InputTranslate.languages;
   const enabledToggle = document.getElementById('enabled-toggle');
-  const counterToggle = document.getElementById('counter-toggle');
-  const targetLanguageSelect = document.getElementById('target-language-select');
+  const targetLanguageTrigger = document.getElementById('target-language-trigger');
+  const targetLanguageValue = document.getElementById('target-language-value');
+  const targetLanguageList = document.getElementById('target-language-list');
   const disabledSourcePills = document.getElementById('disabled-source-pills');
-  const excludeCurrentRow = document.getElementById('exclude-current-row');
-  const excludeCurrentLabel = document.getElementById('exclude-current-label');
-  const excludeCurrentBtn = document.getElementById('exclude-current-btn');
-  const excludeSelectRow = document.getElementById('exclude-select-row');
-  const excludeLanguageSelect = document.getElementById('exclude-language-select');
-  const excludeLanguageBtn = document.getElementById('exclude-language-btn');
-  const providerSelect = document.getElementById('provider-select');
+  const skipSuggest = document.getElementById('skip-suggest');
+  const skipSuggestChip = document.getElementById('skip-suggest-chip');
+  const skipSuggestText = document.getElementById('skip-suggest-text');
+  const skipCombobox = document.getElementById('skip-combobox');
+  const skipLanguageInput = document.getElementById('skip-language-input');
+  const skipLanguageList = document.getElementById('skip-language-list');
+  const providerSegments = [
+    ...document.querySelectorAll('.popup__segment[data-provider]'),
+  ];
   const providerHint = document.getElementById('provider-hint');
   const quotaLabel = document.getElementById('quota-label');
   const quotaValue = document.getElementById('quota-value');
   const quotaBar = document.getElementById('quota-bar');
-  const quotaMeter = quotaBar.parentElement;
   const chromeModel = document.getElementById('chrome-model');
   const chromeModelLabel = document.getElementById('chrome-model-label');
   const chromeModelValue = document.getElementById('chrome-model-value');
@@ -28,22 +30,39 @@
   const chromeModelDownload = document.getElementById('chrome-model-download');
   const googleApiKeyField = document.getElementById('google-api-key-field');
   const googleApiKey = document.getElementById('google-api-key');
-  const googleApiKeyHint = document.getElementById('google-api-key-hint');
   const googleApiKeyClear = document.getElementById('google-api-key-clear');
   const siteToggle = document.getElementById('site-toggle');
   const siteToggleHint = document.getElementById('site-toggle-hint');
+  const shortcutLink = document.getElementById('shortcut-link');
 
   let currentHostname = null;
   let currentSettings = null;
   let selectionSourceLanguage = null;
+  let selectedTargetLanguage = 'en';
+  let targetListOpen = false;
+  let targetHighlightIndex = -1;
+  let skipHighlightIndex = -1;
+  let skipListOpen = false;
 
   const PROVIDER_HINTS = {
-    chrome:
-      'On-device, без ключа и лимита API. Приватно и офлайн после скачивания пакетов.',
-    google:
-      'До 500 000 символов/мес. Нужен личный API key и интернет; текст уходит в Google.',
-    mymemory: 'До 50 000 символов/день. Текст уходит на внешний сервис MyMemory.',
+    chrome: 'On-device, no API key or quota. Private and offline after packs download.',
+    google: 'Sends text to Google. Needs your own API key.',
+    mymemory: 'Up to 50,000 characters/day. Text is sent to MyMemory.',
   };
+
+  function getSelectedProvider() {
+    const active = providerSegments.find(
+      (segment) => segment.getAttribute('aria-checked') === 'true'
+    );
+    return active?.dataset.provider || 'mymemory';
+  }
+
+  function setSelectedProvider(provider) {
+    for (const segment of providerSegments) {
+      const selected = segment.dataset.provider === provider;
+      segment.setAttribute('aria-checked', selected ? 'true' : 'false');
+    }
+  }
 
   function applyProviderHint(provider) {
     providerHint.hidden = false;
@@ -69,25 +88,110 @@
     );
   }
 
-  function populateTargetLanguageSelect() {
-    targetLanguageSelect.innerHTML = '';
-    for (const lang of languagesApi.getShippedLanguages()) {
-      const option = document.createElement('option');
-      option.value = lang.id;
-      option.textContent = formatLanguageLabel(lang);
-      targetLanguageSelect.appendChild(option);
+  function setTargetLanguageDisplay(languageId) {
+    selectedTargetLanguage = languageId;
+    const lang = languagesApi.getLanguage(languageId);
+    targetLanguageValue.textContent = lang ? formatLanguageLabel(lang) : languageId;
+  }
+
+  function updateTargetHighlight(options) {
+    for (let i = 0; i < options.length; i += 1) {
+      options[i].setAttribute(
+        'aria-selected',
+        i === targetHighlightIndex ? 'true' : 'false'
+      );
+    }
+    options[targetHighlightIndex]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function setTargetListOpen(open) {
+    targetListOpen = open;
+    targetLanguageList.hidden = !open;
+    targetLanguageTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) {
+      targetHighlightIndex = -1;
+      for (const option of targetLanguageList.querySelectorAll(
+        '.popup__combobox-option'
+      )) {
+        option.setAttribute(
+          'aria-selected',
+          option.dataset.languageId === selectedTargetLanguage ? 'true' : 'false'
+        );
+      }
     }
   }
 
-  function getExcludableLanguages(settings) {
+  async function chooseTargetLanguage(languageId) {
+    if (!languageId || languageId === selectedTargetLanguage) {
+      setTargetListOpen(false);
+      return;
+    }
+    const next = await settingsApi.setSettings({ targetLanguage: languageId });
+    applySettingsToUi(next);
+    setTargetListOpen(false);
+    await loadChromeModelStatus();
+  }
+
+  function populateTargetLanguageList() {
+    targetLanguageList.innerHTML = '';
+    const languages = languagesApi.getShippedLanguages();
+
+    languages.forEach((lang, index) => {
+      const item = document.createElement('li');
+      item.className = 'popup__combobox-option';
+      item.setAttribute('role', 'option');
+      item.dataset.languageId = lang.id;
+      item.textContent = formatLanguageLabel(lang);
+      item.setAttribute(
+        'aria-selected',
+        lang.id === selectedTargetLanguage ? 'true' : 'false'
+      );
+      item.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+      });
+      item.addEventListener('click', () => {
+        chooseTargetLanguage(lang.id);
+      });
+      item.addEventListener('mouseenter', () => {
+        targetHighlightIndex = index;
+        updateTargetHighlight([...targetLanguageList.children]);
+      });
+      targetLanguageList.appendChild(item);
+    });
+  }
+
+  function openTargetLanguageList() {
+    populateTargetLanguageList();
+    const options = [...targetLanguageList.children];
+    targetHighlightIndex = Math.max(
+      0,
+      options.findIndex(
+        (option) => option.dataset.languageId === selectedTargetLanguage
+      )
+    );
+    setTargetListOpen(true);
+    updateTargetHighlight(options);
+  }
+
+  function getExcludableLanguages(settings, query = '') {
     const disabled = new Set(settings.disabledSourceLanguages || []);
-    return languagesApi.getShippedLanguages().filter((lang) => !disabled.has(lang.id));
+    const needle = String(query || '')
+      .trim()
+      .toLowerCase();
+    return languagesApi.getShippedLanguages().filter((lang) => {
+      if (disabled.has(lang.id)) return false;
+      if (!needle) return true;
+      const haystack = [lang.name, lang.shortLabel, lang.id]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(needle);
+    });
   }
 
   function renderDisabledSourcePills(settings) {
     const disabledIds = settings.disabledSourceLanguages || [];
     disabledSourcePills.innerHTML = '';
-    disabledSourcePills.hidden = disabledIds.length === 0;
 
     for (const id of disabledIds) {
       const lang = languagesApi.getLanguage(id);
@@ -103,64 +207,117 @@
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'popup__pill-remove';
-      remove.setAttribute('aria-label', `Включить ${lang.name}`);
+      remove.setAttribute('aria-label', `Enable ${lang.name}`);
       remove.textContent = '×';
-      remove.addEventListener('click', () => removeDisabledSource(id));
+      remove.addEventListener('click', (event) => {
+        event.stopPropagation();
+        removeDisabledSource(id);
+      });
 
       pill.append(text, remove);
       disabledSourcePills.appendChild(pill);
     }
   }
 
-  function populateExcludeLanguageSelect(settings) {
-    const previous = excludeLanguageSelect.value;
-    const options = getExcludableLanguages(settings).filter(
-      (lang) => lang.id !== selectionSourceLanguage
-    );
-
-    excludeLanguageSelect.innerHTML = '';
-    for (const lang of options) {
-      const option = document.createElement('option');
-      option.value = lang.id;
-      option.textContent = formatLanguageLabel(lang);
-      excludeLanguageSelect.appendChild(option);
-    }
-
-    if (options.some((lang) => lang.id === previous)) {
-      excludeLanguageSelect.value = previous;
-    }
-
-    const hasOptions = options.length > 0;
-    excludeLanguageSelect.disabled = !hasOptions;
-    excludeLanguageBtn.disabled = !hasOptions;
-    excludeSelectRow.hidden = !hasOptions && Boolean(selectionSourceLanguage);
-  }
-
-  function updateExcludeCurrentRow(settings) {
+  function renderSkipSuggest(settings) {
     const lang = selectionSourceLanguage
       ? languagesApi.getLanguage(selectionSourceLanguage)
       : null;
     const disabled = new Set(settings.disabledSourceLanguages || []);
-    const canExclude = Boolean(lang) && !disabled.has(lang.id);
+    const canSuggest = Boolean(lang) && !disabled.has(lang.id);
 
-    excludeCurrentRow.hidden = !canExclude;
-    if (!canExclude) return;
+    skipSuggest.hidden = !canSuggest;
+    if (!canSuggest) return;
 
-    excludeCurrentLabel.textContent = `Сейчас: ${formatLanguageLabel(lang)}`;
-    excludeCurrentBtn.disabled = false;
+    skipSuggestText.textContent = formatLanguageLabel(lang);
+    skipSuggestChip.setAttribute('aria-label', `Skip ${lang.name}`);
   }
 
-  function renderDisabledSourcesUi(settings) {
+  function setSkipListOpen(open) {
+    skipListOpen = open;
+    skipLanguageList.hidden = !open;
+    skipLanguageInput.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) {
+      skipHighlightIndex = -1;
+      for (const option of skipLanguageList.querySelectorAll(
+        '.popup__combobox-option'
+      )) {
+        option.setAttribute('aria-selected', 'false');
+      }
+    }
+  }
+
+  function updateSkipHighlight(options) {
+    for (let i = 0; i < options.length; i += 1) {
+      options[i].setAttribute(
+        'aria-selected',
+        i === skipHighlightIndex ? 'true' : 'false'
+      );
+    }
+    options[skipHighlightIndex]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function renderSkipLanguageList(settings) {
+    const options = getExcludableLanguages(settings, skipLanguageInput.value);
+    skipLanguageList.innerHTML = '';
+
+    for (const lang of options) {
+      const item = document.createElement('li');
+      item.className = 'popup__combobox-option';
+      item.setAttribute('role', 'option');
+      item.dataset.languageId = lang.id;
+      item.textContent = formatLanguageLabel(lang);
+      item.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+      });
+      item.addEventListener('click', async () => {
+        await addDisabledSource(lang.id);
+        skipLanguageInput.value = '';
+        setSkipListOpen(false);
+        skipLanguageInput.focus();
+      });
+      skipLanguageList.appendChild(item);
+    }
+
+    if (options.length === 0) {
+      skipHighlightIndex = -1;
+      setSkipListOpen(false);
+      return options;
+    }
+
+    if (skipHighlightIndex >= options.length) {
+      skipHighlightIndex = options.length - 1;
+    }
+    if (skipListOpen && skipHighlightIndex < 0) {
+      skipHighlightIndex = 0;
+    }
+    updateSkipHighlight([...skipLanguageList.children]);
+    return options;
+  }
+
+  function openSkipLanguageList() {
+    const settings = currentSettings || { disabledSourceLanguages: [] };
+    const options = renderSkipLanguageList(settings);
+    if (options.length === 0) {
+      setSkipListOpen(false);
+      return;
+    }
+    if (skipHighlightIndex < 0) skipHighlightIndex = 0;
+    setSkipListOpen(true);
+    updateSkipHighlight([...skipLanguageList.children]);
+  }
+
+  function renderSkipLanguagesUi(settings) {
     renderDisabledSourcePills(settings);
-    updateExcludeCurrentRow(settings);
-    populateExcludeLanguageSelect(settings);
+    renderSkipSuggest(settings);
+    if (skipListOpen) renderSkipLanguageList(settings);
   }
 
   async function addDisabledSource(languageId) {
     if (!languageId || !languagesApi.isShippedLanguageId(languageId)) return;
     const current = currentSettings || (await settingsApi.getSettings());
     if (current.disabledSourceLanguages.includes(languageId)) {
-      renderDisabledSourcesUi(current);
+      renderSkipLanguagesUi(current);
       return;
     }
     const next = await settingsApi.setSettings({
@@ -199,7 +356,7 @@
 
   function formatCount(value) {
     if (value == null) return '…';
-    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return Number(value).toLocaleString('en-US');
   }
 
   function stopModelPoll() {
@@ -218,7 +375,7 @@
 
   function applyChromeModelStatus(status, probe) {
     const label = pairLabel(probe.source, probe.target);
-    chromeModelLabel.textContent = `Пакеты ${label}`;
+    chromeModelLabel.textContent = `Packs ${label}`;
 
     if (!status) {
       chromeModelValue.textContent = '…';
@@ -239,7 +396,7 @@
       chromeModelDownload.hidden = true;
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Скачивание языковых пакетов…';
+      chromeModelHint.textContent = 'Downloading language packs…';
       startModelPoll();
       return;
     }
@@ -256,31 +413,31 @@
     }
 
     if (status.availability === 'downloadable') {
-      chromeModelValue.textContent = 'Не скачаны';
+      chromeModelValue.textContent = 'Not downloaded';
       chromeModelDownload.hidden = false;
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = `Нужны для on-device перевода ${label}`;
+      chromeModelHint.textContent = `Required for on-device translation ${label}`;
       return;
     }
 
     if (status.availability === 'unavailable') {
-      chromeModelValue.textContent = 'Недоступны';
+      chromeModelValue.textContent = 'Unavailable';
       chromeModelDownload.hidden = true;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = status.error || `Пара ${label} не поддерживается`;
+      chromeModelHint.textContent = status.error || `Pair ${label} is not supported`;
       return;
     }
 
-    chromeModelValue.textContent = 'Нет API';
+    chromeModelValue.textContent = 'No API';
     chromeModelDownload.hidden = true;
     chromeModelHint.hidden = false;
     chromeModelHint.textContent =
-      status.error || 'Нужен Chrome 138+ (desktop) с Translator API';
+      status.error || 'Needs Chrome 138+ (desktop) with Translator API';
   }
 
   async function loadChromeModelStatus({ silent = false } = {}) {
-    if (providerSelect.value !== 'chrome') {
+    if (getSelectedProvider() !== 'chrome') {
       chromeModel.hidden = true;
       stopModelPoll();
       return;
@@ -318,7 +475,7 @@
     if (!currentHostname) {
       siteToggle.checked = true;
       siteToggle.disabled = true;
-      siteToggleHint.textContent = 'Недоступно для этой страницы';
+      siteToggleHint.textContent = 'Unavailable for this page';
       return;
     }
 
@@ -330,10 +487,10 @@
   function applySettingsToUi(settings) {
     currentSettings = settings;
     enabledToggle.checked = settings.enabled;
-    counterToggle.checked = settings.showCharCounter;
-    targetLanguageSelect.value = settings.targetLanguage;
-    renderDisabledSourcesUi(settings);
-    providerSelect.value = settings.provider;
+    setTargetLanguageDisplay(settings.targetLanguage);
+    populateTargetLanguageList();
+    renderSkipLanguagesUi(settings);
+    setSelectedProvider(settings.provider);
     applyProviderHint(settings.provider);
     chromeModel.hidden = settings.provider !== 'chrome';
     googleApiKeyField.hidden = settings.provider !== 'google';
@@ -356,11 +513,8 @@
   async function loadGoogleApiKeyStatus() {
     const apiKey = await settingsApi.getGoogleApiKey();
     googleApiKey.value = '';
-    googleApiKey.placeholder = apiKey ? 'Ключ сохранён' : 'Введите личный ключ';
+    googleApiKey.placeholder = apiKey ? 'Key saved' : 'Paste your Google API key';
     googleApiKeyClear.hidden = !apiKey;
-    googleApiKeyHint.textContent = apiKey
-      ? 'Личный ключ сохранён локально в расширении.'
-      : 'Ключ не задан. Google Translate недоступен.';
   }
 
   async function loadQuota() {
@@ -368,31 +522,36 @@
       const quota = await chrome.runtime.sendMessage({ type: 'GET_QUOTA' });
 
       if (quota?.period === 'none' || quota?.limit == null) {
-        quotaLabel.textContent = 'Лимит';
-        quotaValue.textContent = 'Без лимита';
+        quotaLabel.textContent = 'Limit';
+        quotaValue.textContent = 'No limit';
         quotaBar.style.width = '0%';
-        if (quotaMeter) quotaMeter.hidden = true;
         return;
       }
 
-      if (quotaMeter) quotaMeter.hidden = false;
       const used = quota?.charsUsed ?? 0;
       const limit = quota?.limit ?? quota?.dailyLimit ?? 0;
-      const period = quota?.period === 'day' ? 'день' : 'месяц';
-      quotaLabel.textContent = `Лимит за ${period}`;
+      quotaLabel.textContent =
+        quota?.period === 'day' ? 'Used today' : 'Used this month';
       quotaValue.textContent = `${formatCount(used)} / ${formatCount(limit)}`;
       const percent = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
       quotaBar.style.width = `${percent}%`;
     } catch {
-      quotaLabel.textContent = 'Лимит';
+      quotaLabel.textContent = 'Used';
       quotaValue.textContent = '… / …';
       quotaBar.style.width = '0%';
-      if (quotaMeter) quotaMeter.hidden = false;
     }
   }
 
+  async function selectProvider(provider) {
+    const next = await settingsApi.setSettings({ provider });
+    applySettingsToUi(next);
+    await loadQuota();
+    await loadChromeModelStatus();
+    if (next.provider === 'google') await loadGoogleApiKeyStatus();
+  }
+
   async function init() {
-    populateTargetLanguageSelect();
+    populateTargetLanguageList();
     currentHostname = await resolveCurrentHostname();
     selectionSourceLanguage = await resolveSelectionSourceLanguage();
     const settings = await settingsApi.getSettings();
@@ -406,37 +565,159 @@
       applySettingsToUi(next);
     });
 
-    counterToggle.addEventListener('change', async () => {
-      const next = await settingsApi.setSettings({
-        showCharCounter: counterToggle.checked,
-      });
-      applySettingsToUi(next);
+    targetLanguageTrigger.addEventListener('click', () => {
+      if (targetListOpen) {
+        setTargetListOpen(false);
+        return;
+      }
+      openTargetLanguageList();
     });
 
-    targetLanguageSelect.addEventListener('change', async () => {
-      const next = await settingsApi.setSettings({
-        targetLanguage: targetLanguageSelect.value,
-      });
-      applySettingsToUi(next);
-      await loadChromeModelStatus();
+    targetLanguageTrigger.addEventListener('keydown', async (event) => {
+      const options = [...targetLanguageList.children];
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (!targetListOpen) {
+          openTargetLanguageList();
+          return;
+        }
+        if (options.length === 0) return;
+        targetHighlightIndex = (targetHighlightIndex + 1) % options.length;
+        updateTargetHighlight(options);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!targetListOpen) {
+          openTargetLanguageList();
+          return;
+        }
+        if (options.length === 0) return;
+        targetHighlightIndex =
+          targetHighlightIndex <= 0 ? options.length - 1 : targetHighlightIndex - 1;
+        updateTargetHighlight(options);
+        return;
+      }
+
+      if (event.key === 'Enter' || event.key === ' ') {
+        if (!targetListOpen) return;
+        event.preventDefault();
+        const languageId = options[targetHighlightIndex]?.dataset.languageId;
+        if (languageId) await chooseTargetLanguage(languageId);
+        return;
+      }
+
+      if (event.key === 'Escape' && targetListOpen) {
+        event.preventDefault();
+        setTargetListOpen(false);
+      }
     });
 
-    excludeCurrentBtn.addEventListener('click', async () => {
+    skipSuggestChip.addEventListener('click', async () => {
       if (!selectionSourceLanguage) return;
       await addDisabledSource(selectionSourceLanguage);
     });
 
-    excludeLanguageBtn.addEventListener('click', async () => {
-      await addDisabledSource(excludeLanguageSelect.value);
+    skipCombobox.addEventListener('click', () => {
+      skipLanguageInput.focus();
     });
 
-    providerSelect.addEventListener('change', async () => {
-      const next = await settingsApi.setSettings({ provider: providerSelect.value });
-      applySettingsToUi(next);
-      await loadQuota();
-      await loadChromeModelStatus();
-      if (next.provider === 'google') await loadGoogleApiKeyStatus();
+    skipLanguageInput.addEventListener('focus', () => {
+      openSkipLanguageList();
     });
+
+    skipLanguageInput.addEventListener('input', () => {
+      openSkipLanguageList();
+    });
+
+    skipLanguageInput.addEventListener('keydown', async (event) => {
+      const options = [...skipLanguageList.querySelectorAll('.popup__combobox-option')];
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (!skipListOpen) openSkipLanguageList();
+        if (options.length === 0) return;
+        skipHighlightIndex = (skipHighlightIndex + 1) % options.length;
+        updateSkipHighlight(options);
+        return;
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (!skipListOpen) openSkipLanguageList();
+        if (options.length === 0) return;
+        skipHighlightIndex =
+          skipHighlightIndex <= 0 ? options.length - 1 : skipHighlightIndex - 1;
+        updateSkipHighlight(options);
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        if (!skipListOpen || skipHighlightIndex < 0 || !options[skipHighlightIndex]) {
+          return;
+        }
+        event.preventDefault();
+        const languageId = options[skipHighlightIndex].dataset.languageId;
+        await addDisabledSource(languageId);
+        skipLanguageInput.value = '';
+        setSkipListOpen(false);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (!skipListOpen) return;
+        event.preventDefault();
+        setSkipListOpen(false);
+        return;
+      }
+
+      if (
+        event.key === 'Backspace' &&
+        !skipLanguageInput.value &&
+        (currentSettings?.disabledSourceLanguages || []).length > 0
+      ) {
+        const disabled = currentSettings.disabledSourceLanguages;
+        await removeDisabledSource(disabled[disabled.length - 1]);
+      }
+    });
+
+    skipLanguageInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (
+          document.activeElement === skipLanguageInput ||
+          skipLanguageList.contains(document.activeElement)
+        ) {
+          return;
+        }
+        setSkipListOpen(false);
+      }, 0);
+    });
+
+    document.addEventListener('mousedown', (event) => {
+      if (
+        !skipCombobox.contains(event.target) &&
+        !skipLanguageList.contains(event.target)
+      ) {
+        setSkipListOpen(false);
+      }
+
+      if (
+        !targetLanguageTrigger.contains(event.target) &&
+        !targetLanguageList.contains(event.target)
+      ) {
+        setTargetListOpen(false);
+      }
+    });
+
+    for (const segment of providerSegments) {
+      segment.addEventListener('click', async () => {
+        const provider = segment.dataset.provider;
+        if (!provider || provider === getSelectedProvider()) return;
+        await selectProvider(provider);
+      });
+    }
 
     googleApiKey.addEventListener('change', async () => {
       const apiKey = googleApiKey.value.trim();
@@ -476,6 +757,10 @@
       applySettingsToUi(next);
     });
 
+    shortcutLink.addEventListener('click', () => {
+      chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+    });
+
     chromeModelDownload.addEventListener('click', async () => {
       const probe = getProbePair(currentSettings || { targetLanguage: 'en' });
       chromeModelDownload.disabled = true;
@@ -483,7 +768,7 @@
       chromeModelMeter.hidden = false;
       chromeModelBar.style.width = '0%';
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Скачивание языковых пакетов…';
+      chromeModelHint.textContent = 'Downloading language packs…';
       startModelPoll();
       try {
         const status = await chrome.runtime.sendMessage({
@@ -503,7 +788,7 @@
           probe
         );
         chromeModelHint.hidden = false;
-        chromeModelHint.textContent = error.message || 'Не удалось скачать пакеты';
+        chromeModelHint.textContent = error.message || 'Failed to download packs';
         chromeModelDownload.hidden = false;
         chromeModelDownload.disabled = false;
       }
@@ -512,7 +797,7 @@
     chrome.runtime.onMessage.addListener((message) => {
       if (
         message?.type !== 'CHROME_MODEL_STATUS' ||
-        providerSelect.value !== 'chrome'
+        getSelectedProvider() !== 'chrome'
       ) {
         return;
       }
