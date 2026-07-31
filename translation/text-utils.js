@@ -8,7 +8,7 @@ export function normalizeText(text) {
     text.length - trailingWhitespace.length
   );
 
-  if (!content) throw new Error('Пустой текст');
+  if (!content) throw new Error('Empty text');
   return { leadingWhitespace, content, trailingWhitespace };
 }
 

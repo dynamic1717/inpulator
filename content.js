@@ -11,6 +11,7 @@
   let renderedContext = null;
   let isTranslating = false;
   let buttonRenderVersion = 0;
+  let selectionGateVersion = 0;
   let lastHotkeyAt = 0;
   let settings = { ...settingsApi?.DEFAULT_SETTINGS };
   const ui = InputTranslate.floatingUi?.create({ onTranslate: onTranslateClick });
@@ -38,7 +39,7 @@
   function notifyReloadNeeded() {
     if (window.__inputTranslateReloadNotified) return;
     window.__inputTranslateReloadNotified = true;
-    ui?.showToast('Перезагрузите страницу, чтобы использовать Inpulator');
+    ui?.setError('Reload the page to use updated Inpulator');
   }
 
   function handleInvalidatedContext(error) {
@@ -48,7 +49,6 @@
     window.__inputTranslateInvalidated = true;
     InputTranslate.extension?.markExtensionInvalidated?.();
     notifyReloadNeeded();
-    hideButton();
     return true;
   }
 
@@ -62,7 +62,7 @@
       settings = { ...settingsApi.DEFAULT_SETTINGS };
     }
 
-    settingsApi.subscribe((next) => {
+    settingsApi.subscribe(async (next) => {
       const providerChanged = next.provider !== settings.provider;
       settings = next;
       if (providerChanged) runtime.invalidateQuotaCache?.();
@@ -70,10 +70,15 @@
         hideButton();
         return;
       }
-      if (activeContext && contextTools.isTranslatable(activeContext)) {
+      if (
+        activeContext &&
+        (await contextTools.isTranslatable(activeContext, settings))
+      ) {
         showButton(
           contextTools.getButtonPosition(activeContext, null, clampToViewport)
         );
+      } else {
+        hideButton();
       }
     });
 
@@ -90,12 +95,31 @@
     }
 
     try {
-      chrome.runtime.onMessage.addListener((message) => {
-        if (message.type === 'TRANSLATE_HOTKEY') onHotkeyTranslate();
+      chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+        if (message.type === 'TRANSLATE_HOTKEY') {
+          onHotkeyTranslate();
+          return;
+        }
+        if (message.type === 'GET_SELECTION_LANGUAGE') {
+          resolveSelectionLanguage()
+            .then((sourceLanguage) => sendResponse({ sourceLanguage }))
+            .catch(() => sendResponse({ sourceLanguage: null }));
+          return true;
+        }
       });
     } catch (error) {
       handleInvalidatedContext(error);
     }
+  }
+
+  async function resolveSelectionLanguage() {
+    if (!isActive() || !contextTools) return null;
+    const context = contextTools.detect();
+    const text = context?.text?.trim();
+    if (!text) return null;
+    return (
+      (await InputTranslate.languageDetect?.resolveSourceLanguage(context)) || null
+    );
   }
 
   function onMacHotkeyKeydown(event) {
@@ -119,25 +143,25 @@
     };
   }
 
-  function formatCount(value) {
-    if (value === '…') return '…';
-    if (value == null) return '∞';
-    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  function getButtonDimensions() {
+    return { width: 44, height: 44 };
   }
 
-  function getButtonDimensions(counter, showCounter) {
-    if (!showCounter) return { width: 40, height: 40 };
-    return { width: Math.max(44, Math.max(52, counter.length * 6.5) + 12), height: 48 };
-  }
-
-  function syncButtonWithSelection(event) {
+  async function syncButtonWithSelection(event) {
     if (!isActive()) return notifyReloadNeeded();
     if (!isExtensionEnabled()) return hideButton();
     if (isTranslating || ui.contains(event?.target)) return;
 
+    const gateVersion = ++selectionGateVersion;
+
     try {
       const context = contextTools.detect();
-      if (!contextTools.isTranslatable(context)) return hideButton();
+      if (!context?.text?.trim()) return hideButton();
+      if (contextTools.isSame(renderedContext, context)) return;
+
+      const translatable = await contextTools.isTranslatable(context, settings);
+      if (gateVersion !== selectionGateVersion) return;
+      if (!translatable) return hideButton();
       if (contextTools.isSame(renderedContext, context)) return;
 
       activeContext = contextTools.clone(context);
@@ -153,30 +177,23 @@
 
     const context = activeContext;
     if (!context) return;
-    const selectedChars = context.text.length;
-    const showCounter = settings.showCharCounter !== false;
     const renderVersion = ++buttonRenderVersion;
-    const initialCounter = `${formatCount(selectedChars)}/${formatCount('…')}`;
-    ui.setTranslate(selectedChars, '…', { showCounter });
-    ui.show(
-      clampToViewport(
-        anchor.x,
-        anchor.y,
-        getButtonDimensions(initialCounter, showCounter)
-      )
-    );
-
-    if (!showCounter) return;
+    const sourceLanguage =
+      (await InputTranslate.languageDetect?.resolveSourceLanguage(context)) || 'ru';
+    if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
+    const targetLanguage = settings.targetLanguage || 'en';
+    ui.setTranslate({ sourceLanguage, targetLanguage });
+    ui.show(clampToViewport(anchor.x, anchor.y, getButtonDimensions()));
 
     try {
-      const remaining = await runtime.getQuotaRemaining();
+      const quota = await runtime.getQuota();
       if (renderVersion !== buttonRenderVersion || context !== activeContext) return;
-      if (settings.showCharCounter === false) return;
-      const counter = `${formatCount(selectedChars)}/${formatCount(remaining)}`;
-      ui.setTranslate(selectedChars, remaining, { showCounter: true });
-      ui.updatePosition(
-        clampToViewport(anchor.x, anchor.y, getButtonDimensions(counter, true))
-      );
+      ui.setTranslate({
+        sourceLanguage,
+        targetLanguage,
+        quota,
+      });
+      ui.updatePosition(clampToViewport(anchor.x, anchor.y, getButtonDimensions()));
     } catch (error) {
       if (!handleInvalidatedContext(error)) return;
     }
@@ -184,6 +201,7 @@
 
   function hideButton() {
     buttonRenderVersion += 1;
+    selectionGateVersion += 1;
     ui?.hide();
     renderedContext = null;
     if (!isTranslating) activeContext = null;
@@ -199,10 +217,12 @@
 
     try {
       let context = contextTools.detect();
-      if (!contextTools.isTranslatable(context)) {
+      if (!(await contextTools.isTranslatable(context, settings))) {
         context = await InputTranslate.clipboard?.captureSelectionText();
       }
-      if (contextTools.isTranslatable(context)) await translateSelection(context);
+      if (await contextTools.isTranslatable(context, settings)) {
+        await translateSelection(context);
+      }
     } catch (error) {
       if (!handleInvalidatedContext(error)) throw error;
     }
@@ -220,20 +240,24 @@
     ui.setLoading();
 
     try {
-      const response = await runtime.translate(snapshot.text);
+      const sourceLanguage =
+        (await InputTranslate.languageDetect?.resolveSourceLanguage(snapshot)) || null;
+      if (!sourceLanguage) {
+        throw new Error('Could not detect the text language');
+      }
+      const response = await runtime.translate(snapshot.text, { sourceLanguage });
       if (!contextTools.isCurrent(snapshot)) {
-        throw new Error('Выделенный текст изменился; выделите его снова');
+        throw new Error('The selection changed; select the text again');
       }
       await contextTools.applyTranslation(snapshot, response.translatedText);
       hideButton();
-    } catch (error) {
-      if (handleInvalidatedContext(error)) return;
-      hideButton();
-      ui.showToast(error.message || 'Перевод не удался');
-    } finally {
-      isTranslating = false;
       activeContext = null;
       renderedContext = null;
+    } catch (error) {
+      if (handleInvalidatedContext(error)) return;
+      ui.setError(error.message || 'Translation failed');
+    } finally {
+      isTranslating = false;
     }
   }
 

@@ -17,9 +17,38 @@ function pairKey(source, target) {
   return `${source}|${target}`;
 }
 
+function pairLabel(source, target) {
+  return `${String(source).toUpperCase()}→${String(target).toUpperCase()}`;
+}
+
+function packUnavailableMessage(sourceLanguage, targetLanguage) {
+  return `Could not download the Chrome language pack for ${pairLabel(sourceLanguage, targetLanguage)}. Download is unavailable for this pair.`;
+}
+
+function isGenericTranslatorFailure(error) {
+  const raw = String(error?.message || error || '').toLowerCase();
+  return (
+    error?.name === 'UnknownError' ||
+    error?.name === 'NotSupportedError' ||
+    raw.includes('generic failure') ||
+    raw.includes('not supported') ||
+    raw.includes('unavailable')
+  );
+}
+
+function formatTranslatorInstallError(error, sourceLanguage, targetLanguage) {
+  const raw = String(error?.message || error || '');
+  if (isGenericTranslatorFailure(error)) {
+    return packUnavailableMessage(sourceLanguage, targetLanguage);
+  }
+  return raw || packUnavailableMessage(sourceLanguage, targetLanguage);
+}
+
 function assertTranslatorApi() {
   if (!('Translator' in globalThis)) {
-    throw new Error('Chrome Translator API недоступен. Нужен Chrome 138+ (desktop).');
+    throw new Error(
+      'Chrome Translator API is unavailable. Requires Chrome 138+ (desktop).'
+    );
   }
 }
 
@@ -64,7 +93,7 @@ async function refreshAvailability(sourceLanguage, targetLanguage) {
       availability: 'unsupported',
       downloading: false,
       progress: 0,
-      error: error.message || 'Не удалось проверить доступность',
+      error: error.message || 'Could not check availability',
     };
   }
   broadcastStatus();
@@ -81,9 +110,7 @@ async function getTranslator(sourceLanguage, targetLanguage) {
     targetLanguage,
   });
   if (availability === 'unavailable') {
-    throw new Error(
-      `Chrome Translator: пара ${sourceLanguage}→${targetLanguage} недоступна`
-    );
+    throw new Error(packUnavailableMessage(sourceLanguage, targetLanguage));
   }
 
   const needsDownload =
@@ -123,9 +150,28 @@ async function getTranslator(sourceLanguage, targetLanguage) {
   } catch (error) {
     installInProgress = false;
     modelStatus.downloading = false;
-    modelStatus.error = error.message || 'Не удалось скачать пакеты';
+
+    let availability = modelStatus.availability;
+    try {
+      availability = await globalThis.Translator.availability({
+        sourceLanguage,
+        targetLanguage,
+      });
+      modelStatus.availability = availability;
+    } catch {
+      // Keep previous availability if the follow-up check fails.
+    }
+
+    const message =
+      availability === 'unavailable'
+        ? packUnavailableMessage(sourceLanguage, targetLanguage)
+        : formatTranslatorInstallError(error, sourceLanguage, targetLanguage);
+    modelStatus.error = message;
+    if (availability === 'unavailable' || isGenericTranslatorFailure(error)) {
+      modelStatus.availability = 'unavailable';
+    }
     broadcastStatus();
-    throw error;
+    throw new Error(message);
   }
 }
 
@@ -135,6 +181,10 @@ async function ensureModel(sourceLanguage, targetLanguage) {
     modelStatus.availability === 'unavailable' ||
     modelStatus.availability === 'unsupported'
   ) {
+    if (modelStatus.availability === 'unavailable' && !modelStatus.error) {
+      modelStatus.error = packUnavailableMessage(sourceLanguage, targetLanguage);
+      broadcastStatus();
+    }
     return snapshotStatus();
   }
   if (
@@ -159,7 +209,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     getAvailabilityCompat(message.sourceLanguage, message.targetLanguage)
       .then((availability) => sendResponse({ availability }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Не удалось проверить доступность' })
+        sendResponse({ error: error.message || 'Could not check availability' })
       );
     return true;
   }
@@ -168,7 +218,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     refreshAvailability(message.sourceLanguage, message.targetLanguage)
       .then((status) => sendResponse({ status }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Не удалось проверить статус' })
+        sendResponse({ error: error.message || 'Could not check status' })
       );
     return true;
   }
@@ -177,7 +227,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     ensureModel(message.sourceLanguage, message.targetLanguage)
       .then((status) => sendResponse({ status }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Не удалось скачать модель' })
+        sendResponse({ error: error.message || 'Could not download the model' })
       );
     return true;
   }
@@ -186,7 +236,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     translateText(message.text, message.sourceLanguage, message.targetLanguage)
       .then((translatedText) => sendResponse({ translatedText }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Перевод Chrome не удался' })
+        sendResponse({ error: error.message || 'Chrome translation failed' })
       );
     return true;
   }

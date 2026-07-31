@@ -1,336 +1,186 @@
-(function () {
-  'use strict';
+import { createProviderUi } from './provider.js';
+import { createQuotaUi } from './quota.js';
+import { createSkipLanguagesUi } from './skip-languages.js';
+import { createTargetLanguageUi } from './target-language.js';
 
-  const settingsApi = window.InputTranslate.settings;
-  const enabledToggle = document.getElementById('enabled-toggle');
-  const counterToggle = document.getElementById('counter-toggle');
-  const providerSelect = document.getElementById('provider-select');
-  const providerHint = document.getElementById('provider-hint');
-  const quotaLabel = document.getElementById('quota-label');
-  const quotaValue = document.getElementById('quota-value');
-  const quotaBar = document.getElementById('quota-bar');
-  const quotaMeter = quotaBar.parentElement;
-  const chromeModel = document.getElementById('chrome-model');
-  const chromeModelValue = document.getElementById('chrome-model-value');
-  const chromeModelMeter = document.getElementById('chrome-model-meter');
-  const chromeModelBar = document.getElementById('chrome-model-bar');
-  const chromeModelHint = document.getElementById('chrome-model-hint');
-  const chromeModelDownload = document.getElementById('chrome-model-download');
-  const googleApiKeyField = document.getElementById('google-api-key-field');
-  const googleApiKey = document.getElementById('google-api-key');
-  const googleApiKeyHint = document.getElementById('google-api-key-hint');
-  const googleApiKeyClear = document.getElementById('google-api-key-clear');
-  const siteToggle = document.getElementById('site-toggle');
-  const siteToggleHint = document.getElementById('site-toggle-hint');
+const settingsApi = window.InputTranslate.settings;
+const languagesApi = window.InputTranslate.languages;
 
-  let currentHostname = null;
+const enabledToggle = document.getElementById('enabled-toggle');
+const siteToggle = document.getElementById('site-toggle');
+const siteToggleHint = document.getElementById('site-toggle-hint');
+const shortcutLink = document.getElementById('shortcut-link');
 
-  const PROVIDER_HINTS = {
-    chrome:
-      'On-device, без ключа и лимита API. Приватно и офлайн после скачивания пакетов.',
-    google:
-      'До 500 000 символов/мес. Нужен личный API key и интернет; текст уходит в Google.',
-    mymemory: 'До 50 000 символов/день. Текст уходит на внешний сервис MyMemory.',
-  };
+const state = {
+  hostname: null,
+  settings: null,
+  selectionSourceLanguage: null,
+};
 
-  function applyProviderHint(provider) {
-    providerHint.hidden = false;
-    providerHint.textContent = PROVIDER_HINTS[provider] || PROVIDER_HINTS.chrome;
+const quotaUi = createQuotaUi({
+  quotaLabel: document.getElementById('quota-label'),
+  quotaValue: document.getElementById('quota-value'),
+  quotaBar: document.getElementById('quota-bar'),
+});
+
+const providerUi = createProviderUi({
+  segments: [...document.querySelectorAll('.popup__segment[data-provider]')],
+  providerHint: document.getElementById('provider-hint'),
+  chromeModel: document.getElementById('chrome-model'),
+  chromeModelLabel: document.getElementById('chrome-model-label'),
+  chromeModelValue: document.getElementById('chrome-model-value'),
+  chromeModelMeter: document.getElementById('chrome-model-meter'),
+  chromeModelBar: document.getElementById('chrome-model-bar'),
+  chromeModelHint: document.getElementById('chrome-model-hint'),
+  chromeModelDownload: document.getElementById('chrome-model-download'),
+  googleApiKeyField: document.getElementById('google-api-key-field'),
+  googleApiKey: document.getElementById('google-api-key'),
+  googleApiKeyClear: document.getElementById('google-api-key-clear'),
+  languagesApi,
+  settingsApi,
+  getSettings: () => state.settings,
+  getSelectionSourceLanguage: () => state.selectionSourceLanguage,
+  onSettingsChange: (next) => applySettingsToUi(next),
+  onQuotaReload: () => quotaUi.load(),
+});
+
+const targetLanguageUi = createTargetLanguageUi({
+  trigger: document.getElementById('target-language-trigger'),
+  valueEl: document.getElementById('target-language-value'),
+  listEl: document.getElementById('target-language-list'),
+  languagesApi,
+  settingsApi,
+  onChange: async (next) => {
+    applySettingsToUi(next);
+    await providerUi.loadChromeModelStatus();
+  },
+});
+
+const skipLanguagesUi = createSkipLanguagesUi({
+  pillsEl: document.getElementById('disabled-source-pills'),
+  suggestEl: document.getElementById('skip-suggest'),
+  suggestChip: document.getElementById('skip-suggest-chip'),
+  suggestText: document.getElementById('skip-suggest-text'),
+  comboboxEl: document.getElementById('skip-combobox'),
+  inputEl: document.getElementById('skip-language-input'),
+  listEl: document.getElementById('skip-language-list'),
+  languagesApi,
+  settingsApi,
+  getSettings: () => state.settings,
+  getSelectionSourceLanguage: () => state.selectionSourceLanguage,
+  onSettingsChange: (next) => applySettingsToUi(next),
+});
+
+function isHostBlocked(host, domains) {
+  return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
+}
+
+function applySiteToggle(settings) {
+  if (!state.hostname) {
+    siteToggle.checked = true;
+    siteToggle.disabled = true;
+    siteToggleHint.textContent = 'Unavailable for this page';
+    return;
   }
 
-  let modelPollTimer = null;
+  siteToggle.disabled = false;
+  siteToggle.checked = !isHostBlocked(state.hostname, settings.blockedDomains);
+  siteToggleHint.textContent = state.hostname;
+}
 
-  function formatCount(value) {
-    if (value == null) return '…';
-    return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+function applySettingsToUi(settings) {
+  state.settings = settings;
+  enabledToggle.checked = settings.enabled;
+  targetLanguageUi.apply(settings);
+  skipLanguagesUi.render(settings);
+  providerUi.apply(settings);
+  applySiteToggle(settings);
+}
+
+async function resolveSelectionSourceLanguage() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id || !tab.url) return null;
+    const url = new URL(tab.url);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      type: 'GET_SELECTION_LANGUAGE',
+    });
+    return languagesApi.normalizeLanguageId(response?.sourceLanguage);
+  } catch {
+    return null;
   }
+}
 
-  function stopModelPoll() {
-    if (modelPollTimer != null) {
-      clearInterval(modelPollTimer);
-      modelPollTimer = null;
-    }
+async function resolveCurrentHostname() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.url) return null;
+    const url = new URL(tab.url);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    return settingsApi.normalizeDomain(url.hostname) || null;
+  } catch {
+    return null;
   }
+}
 
-  function startModelPoll() {
-    if (modelPollTimer != null) return;
-    modelPollTimer = setInterval(() => {
-      loadChromeModelStatus({ silent: true });
-    }, 500);
-  }
+async function init() {
+  targetLanguageUi.populate();
+  state.hostname = await resolveCurrentHostname();
+  state.selectionSourceLanguage = await resolveSelectionSourceLanguage();
+  const settings = await settingsApi.getSettings();
+  applySettingsToUi(settings);
+  await providerUi.loadGoogleApiKeyStatus();
+  await quotaUi.load();
+  await providerUi.loadChromeModelStatus();
 
-  function applyChromeModelStatus(status) {
-    if (!status) {
-      chromeModelValue.textContent = '…';
-      chromeModelMeter.hidden = true;
-      chromeModelDownload.hidden = true;
-      chromeModelHint.hidden = true;
-      stopModelPoll();
+  enabledToggle.addEventListener('change', async () => {
+    const next = await settingsApi.setSettings({ enabled: enabledToggle.checked });
+    applySettingsToUi(next);
+  });
+
+  siteToggle.addEventListener('change', async () => {
+    if (!state.hostname) {
+      applySiteToggle(await settingsApi.getSettings());
       return;
     }
 
-    const percent = Math.round(Math.min(1, Math.max(0, status.progress || 0)) * 100);
-    const isDownloading = status.downloading || status.availability === 'downloading';
+    const current = await settingsApi.getSettings();
+    let blockedDomains;
 
-    if (isDownloading) {
-      chromeModelValue.textContent = `${percent}%`;
-      chromeModelMeter.hidden = false;
-      chromeModelBar.style.width = `${percent}%`;
-      chromeModelDownload.hidden = true;
-      chromeModelDownload.disabled = false;
-      chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Скачивание языковых пакетов…';
-      startModelPoll();
-      return;
+    if (siteToggle.checked) {
+      blockedDomains = current.blockedDomains.filter(
+        (domain) =>
+          !(state.hostname === domain || state.hostname.endsWith(`.${domain}`))
+      );
+    } else {
+      blockedDomains = current.blockedDomains.includes(state.hostname)
+        ? current.blockedDomains
+        : [...current.blockedDomains, state.hostname];
     }
 
-    stopModelPoll();
-    chromeModelMeter.hidden = true;
-    chromeModelBar.style.width = '0%';
+    const next = await settingsApi.setSettings({ blockedDomains });
+    applySettingsToUi(next);
+  });
 
-    if (status.availability === 'available') {
-      chromeModelValue.textContent = '✓';
-      chromeModelDownload.hidden = true;
-      chromeModelHint.hidden = true;
-      return;
-    }
+  shortcutLink.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  });
 
-    if (status.availability === 'downloadable') {
-      chromeModelValue.textContent = 'Не скачаны';
-      chromeModelDownload.hidden = false;
-      chromeModelDownload.disabled = false;
-      chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Нужны для on-device перевода RU→EN';
-      return;
-    }
+  targetLanguageUi.bind();
+  skipLanguagesUi.bind();
+  providerUi.bind();
 
-    if (status.availability === 'unavailable') {
-      chromeModelValue.textContent = 'Недоступны';
-      chromeModelDownload.hidden = true;
-      chromeModelHint.hidden = false;
-      chromeModelHint.textContent = status.error || 'Пара RU→EN не поддерживается';
-      return;
-    }
+  document.addEventListener('mousedown', (event) => {
+    if (!skipLanguagesUi.contains(event.target)) skipLanguagesUi.close();
+    if (!targetLanguageUi.contains(event.target)) targetLanguageUi.close();
+  });
 
-    chromeModelValue.textContent = 'Нет API';
-    chromeModelDownload.hidden = true;
-    chromeModelHint.hidden = false;
-    chromeModelHint.textContent =
-      status.error || 'Нужен Chrome 138+ (desktop) с Translator API';
-  }
+  settingsApi.subscribe((next) => {
+    applySettingsToUi(next);
+    quotaUi.load();
+    providerUi.loadChromeModelStatus();
+  });
+}
 
-  async function loadChromeModelStatus({ silent = false } = {}) {
-    if (providerSelect.value !== 'chrome') {
-      chromeModel.hidden = true;
-      stopModelPoll();
-      return;
-    }
-
-    chromeModel.hidden = false;
-    try {
-      const status = await chrome.runtime.sendMessage({
-        type: 'GET_CHROME_MODEL_STATUS',
-      });
-      applyChromeModelStatus(status);
-    } catch (error) {
-      if (!silent) {
-        applyChromeModelStatus({
-          availability: 'unsupported',
-          downloading: false,
-          progress: 0,
-          error: error.message,
-        });
-      }
-    }
-  }
-
-  function isHostBlocked(host, domains) {
-    return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
-  }
-
-  function applySiteToggle(settings) {
-    if (!currentHostname) {
-      siteToggle.checked = true;
-      siteToggle.disabled = true;
-      siteToggleHint.textContent = 'Недоступно для этой страницы';
-      return;
-    }
-
-    siteToggle.disabled = false;
-    siteToggle.checked = !isHostBlocked(currentHostname, settings.blockedDomains);
-    siteToggleHint.textContent = currentHostname;
-  }
-
-  function applySettingsToUi(settings) {
-    enabledToggle.checked = settings.enabled;
-    counterToggle.checked = settings.showCharCounter;
-    providerSelect.value = settings.provider;
-    applyProviderHint(settings.provider);
-    chromeModel.hidden = settings.provider !== 'chrome';
-    googleApiKeyField.hidden = settings.provider !== 'google';
-    applySiteToggle(settings);
-    if (settings.provider !== 'chrome') stopModelPoll();
-  }
-
-  async function resolveCurrentHostname() {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.url) return null;
-      const url = new URL(tab.url);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-      return settingsApi.normalizeDomain(url.hostname) || null;
-    } catch {
-      return null;
-    }
-  }
-
-  async function loadGoogleApiKeyStatus() {
-    const apiKey = await settingsApi.getGoogleApiKey();
-    googleApiKey.value = '';
-    googleApiKey.placeholder = apiKey ? 'Ключ сохранён' : 'Введите личный ключ';
-    googleApiKeyClear.hidden = !apiKey;
-    googleApiKeyHint.textContent = apiKey
-      ? 'Личный ключ сохранён локально в расширении.'
-      : 'Ключ не задан. Google Translate недоступен.';
-  }
-
-  async function loadQuota() {
-    try {
-      const quota = await chrome.runtime.sendMessage({ type: 'GET_QUOTA' });
-
-      if (quota?.period === 'none' || quota?.limit == null) {
-        quotaLabel.textContent = 'Лимит';
-        quotaValue.textContent = 'Без лимита';
-        quotaBar.style.width = '0%';
-        if (quotaMeter) quotaMeter.hidden = true;
-        return;
-      }
-
-      if (quotaMeter) quotaMeter.hidden = false;
-      const used = quota?.charsUsed ?? 0;
-      const limit = quota?.limit ?? quota?.dailyLimit ?? 0;
-      const period = quota?.period === 'day' ? 'день' : 'месяц';
-      quotaLabel.textContent = `Лимит за ${period}`;
-      quotaValue.textContent = `${formatCount(used)} / ${formatCount(limit)}`;
-      const percent = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-      quotaBar.style.width = `${percent}%`;
-    } catch {
-      quotaLabel.textContent = 'Лимит';
-      quotaValue.textContent = '… / …';
-      quotaBar.style.width = '0%';
-      if (quotaMeter) quotaMeter.hidden = false;
-    }
-  }
-
-  async function init() {
-    currentHostname = await resolveCurrentHostname();
-    const settings = await settingsApi.getSettings();
-    applySettingsToUi(settings);
-    await loadGoogleApiKeyStatus();
-    await loadQuota();
-    await loadChromeModelStatus();
-
-    enabledToggle.addEventListener('change', async () => {
-      const next = await settingsApi.setSettings({ enabled: enabledToggle.checked });
-      applySettingsToUi(next);
-    });
-
-    counterToggle.addEventListener('change', async () => {
-      const next = await settingsApi.setSettings({
-        showCharCounter: counterToggle.checked,
-      });
-      applySettingsToUi(next);
-    });
-
-    providerSelect.addEventListener('change', async () => {
-      const next = await settingsApi.setSettings({ provider: providerSelect.value });
-      applySettingsToUi(next);
-      await loadQuota();
-      await loadChromeModelStatus();
-      if (next.provider === 'google') await loadGoogleApiKeyStatus();
-    });
-
-    googleApiKey.addEventListener('change', async () => {
-      const apiKey = googleApiKey.value.trim();
-      if (!apiKey) return;
-      await settingsApi.setGoogleApiKey(apiKey);
-      await loadGoogleApiKeyStatus();
-      await loadQuota();
-    });
-
-    googleApiKeyClear.addEventListener('click', async () => {
-      await settingsApi.setGoogleApiKey('');
-      await loadGoogleApiKeyStatus();
-      await loadQuota();
-    });
-
-    siteToggle.addEventListener('change', async () => {
-      if (!currentHostname) {
-        applySiteToggle(await settingsApi.getSettings());
-        return;
-      }
-
-      const current = await settingsApi.getSettings();
-      let blockedDomains;
-
-      if (siteToggle.checked) {
-        blockedDomains = current.blockedDomains.filter(
-          (domain) =>
-            !(currentHostname === domain || currentHostname.endsWith(`.${domain}`))
-        );
-      } else {
-        blockedDomains = current.blockedDomains.includes(currentHostname)
-          ? current.blockedDomains
-          : [...current.blockedDomains, currentHostname];
-      }
-
-      const next = await settingsApi.setSettings({ blockedDomains });
-      applySettingsToUi(next);
-    });
-
-    chromeModelDownload.addEventListener('click', async () => {
-      chromeModelDownload.disabled = true;
-      chromeModelValue.textContent = '0%';
-      chromeModelMeter.hidden = false;
-      chromeModelBar.style.width = '0%';
-      chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Скачивание языковых пакетов…';
-      startModelPoll();
-      try {
-        const status = await chrome.runtime.sendMessage({
-          type: 'ENSURE_CHROME_MODEL',
-        });
-        applyChromeModelStatus(status);
-      } catch (error) {
-        applyChromeModelStatus({
-          availability: 'downloadable',
-          downloading: false,
-          progress: 0,
-          error: error.message,
-        });
-        chromeModelHint.hidden = false;
-        chromeModelHint.textContent = error.message || 'Не удалось скачать пакеты';
-        chromeModelDownload.hidden = false;
-        chromeModelDownload.disabled = false;
-      }
-    });
-
-    chrome.runtime.onMessage.addListener((message) => {
-      if (
-        message?.type !== 'CHROME_MODEL_STATUS' ||
-        providerSelect.value !== 'chrome'
-      ) {
-        return;
-      }
-      applyChromeModelStatus(message.status);
-    });
-
-    settingsApi.subscribe((next) => {
-      applySettingsToUi(next);
-      loadQuota();
-      loadChromeModelStatus();
-    });
-  }
-
-  init();
-})();
+init();

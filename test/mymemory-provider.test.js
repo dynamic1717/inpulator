@@ -57,7 +57,7 @@ test('provider reports a timeout when the request is aborted', async () => {
       }),
   });
 
-  await assert.rejects(provider.translate('тест'), /Превышено время ожидания/);
+  await assert.rejects(provider.translate('тест'), /Translation request timed out/);
 });
 
 test('provider passes email as de query param when provided', async () => {

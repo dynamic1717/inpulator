@@ -68,24 +68,24 @@ export function createMyMemoryProvider({
       response = await fetchImpl(url, { signal: controller.signal });
     } catch {
       if (controller.signal.aborted) {
-        throw new Error('Превышено время ожидания перевода');
+        throw new Error('Translation request timed out');
       }
-      throw new Error('Ошибка сети');
+      throw new Error('Network error');
     } finally {
       clearTimeout(timeoutId);
     }
 
-    if (!response.ok) throw new Error(`Ошибка API: ${response.status}`);
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();
     if (data.quotaFinished || data.responseStatus === 429) {
-      throw new Error('Дневной лимит перевода исчерпан');
+      throw new Error('Daily translation limit reached');
     }
     if (data.responseStatus !== 200 || !data.responseData?.translatedText) {
       throw new Error(
         data.responseDetails
-          ? `Ошибка MyMemory: ${data.responseDetails}`
-          : 'Перевод не удался'
+          ? `MyMemory error: ${data.responseDetails}`
+          : 'Translation failed'
       );
     }
     return data.responseData.translatedText;
@@ -101,7 +101,7 @@ export function createMyMemoryProvider({
         const quota = await getQuota();
         if (content.length > quota.remaining) {
           throw new Error(
-            `Недостаточно лимита: ${content.length} символов выбрано, ${quota.remaining} осталось`
+            `Not enough quota: ${content.length} characters selected, ${quota.remaining} remaining`
           );
         }
 

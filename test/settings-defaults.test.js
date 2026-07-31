@@ -16,6 +16,8 @@ test('normalizes blocked domains and removes duplicates', () => {
 
   assert.equal(settings.provider, 'google');
   assert.deepEqual(settings.blockedDomains, ['bank.example']);
+  assert.equal(settings.targetLanguage, 'en');
+  assert.deepEqual(settings.disabledSourceLanguages, []);
 });
 
 test('uses safe default settings for malformed blocked domains', () => {
@@ -23,4 +25,19 @@ test('uses safe default settings for malformed blocked domains', () => {
 
   assert.equal(settings.provider, 'mymemory');
   assert.deepEqual(settings.blockedDomains, []);
+});
+
+test('normalizes targetLanguage and disabledSourceLanguages', () => {
+  const settings = normalizeSettings({
+    targetLanguage: 'fr',
+    disabledSourceLanguages: ['ru', 'ru', 'ja', 'zh-CN'],
+  });
+
+  assert.equal(settings.targetLanguage, 'fr');
+  assert.deepEqual(settings.disabledSourceLanguages, ['ru', 'zh']);
+});
+
+test('falls back to english for unknown targetLanguage', () => {
+  const settings = normalizeSettings({ targetLanguage: 'ja' });
+  assert.equal(settings.targetLanguage, 'en');
 });

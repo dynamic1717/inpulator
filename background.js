@@ -13,12 +13,6 @@ const COLOR_ICONS = {
   128: 'icons/icon128.png',
 };
 
-const DISABLED_ICONS = {
-  16: 'icons/icon16-disabled.png',
-  48: 'icons/icon48-disabled.png',
-  128: 'icons/icon128-disabled.png',
-};
-
 async function getSettings() {
   const data = await chrome.storage.local.get(SETTINGS_KEY);
   return normalizeSettings(data[SETTINGS_KEY]);
@@ -26,10 +20,10 @@ async function getSettings() {
 
 async function applyActionIcon(enabled) {
   await chrome.action.setIcon({
-    path: enabled ? COLOR_ICONS : DISABLED_ICONS,
+    path: COLOR_ICONS,
   });
   await chrome.action.setTitle({
-    title: enabled ? 'Inpulator — Перевод текста' : 'Inpulator — выключено',
+    title: enabled ? 'Inpulator — Translate input' : 'Inpulator — disabled',
   });
 }
 
@@ -68,10 +62,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === 'GET_CHROME_MODEL_STATUS') {
+    const sourceLanguage = message.sourceLanguage || 'ru';
+    const targetLanguage = message.targetLanguage || 'en';
     sendToOffscreen({
       type: 'OFFSCREEN_MODEL_STATUS',
-      sourceLanguage: 'ru',
-      targetLanguage: 'en',
+      sourceLanguage,
+      targetLanguage,
     })
       .then((response) => sendResponse(response?.status || response))
       .catch((error) =>
@@ -79,17 +75,19 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           availability: 'unsupported',
           downloading: false,
           progress: 0,
-          error: error.message || 'Не удалось проверить статус',
+          error: error.message || 'Cannot get model status',
         })
       );
     return true;
   }
 
   if (message.type === 'ENSURE_CHROME_MODEL') {
+    const sourceLanguage = message.sourceLanguage || 'ru';
+    const targetLanguage = message.targetLanguage || 'en';
     sendToOffscreen({
       type: 'OFFSCREEN_ENSURE_MODEL',
-      sourceLanguage: 'ru',
-      targetLanguage: 'en',
+      sourceLanguage,
+      targetLanguage,
     })
       .then((response) => sendResponse(response?.status || response))
       .catch((error) =>
@@ -97,7 +95,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           availability: 'unsupported',
           downloading: false,
           progress: 0,
-          error: error.message || 'Не удалось скачать модель',
+          error: error.message || 'Cannot download model',
         })
       );
     return true;
@@ -121,9 +119,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type !== 'TRANSLATE') return;
 
-  translate(message.text)
+  translate(message.text, { sourceLanguage: message.sourceLanguage })
     .then(sendResponse)
-    .catch((error) => sendResponse({ error: error.message || 'Перевод не удался' }));
+    .catch((error) => sendResponse({ error: error.message || 'Translation failed' }));
   return true;
 });
 

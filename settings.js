@@ -9,10 +9,15 @@
   const GOOGLE_API_KEY_STORAGE_KEY = 'googleTranslateApiKey';
   const DEFAULT_SETTINGS = {
     enabled: true,
-    showCharCounter: true,
     provider: 'mymemory',
     blockedDomains: [],
+    targetLanguage: 'en',
+    disabledSourceLanguages: [],
   };
+
+  function getLanguagesApi() {
+    return window.InputTranslate.languages;
+  }
 
   function normalizeDomain(value) {
     return String(value || '')
@@ -24,7 +29,21 @@
       .replace(/^\.+|\.+$/g, '');
   }
 
+  function normalizeDisabledSourceLanguages(raw) {
+    const languagesApi = getLanguagesApi();
+    if (!Array.isArray(raw) || !languagesApi) return [];
+    const shipped = new Set(languagesApi.getShippedLanguageIds());
+    return [
+      ...new Set(
+        raw
+          .map((id) => languagesApi.normalizeLanguageId(id))
+          .filter((id) => id && shipped.has(id))
+      ),
+    ];
+  }
+
   function normalizeSettings(raw) {
+    const languagesApi = getLanguagesApi();
     const provider =
       raw?.provider === 'chrome' || raw?.provider === 'google'
         ? raw.provider
@@ -32,12 +51,19 @@
     const blockedDomains = Array.isArray(raw?.blockedDomains)
       ? [...new Set(raw.blockedDomains.map(normalizeDomain).filter(Boolean))]
       : [];
+    const targetLanguage =
+      languagesApi?.isShippedLanguageId(raw?.targetLanguage) && raw.targetLanguage
+        ? raw.targetLanguage
+        : 'en';
 
     return {
       enabled: raw?.enabled !== false,
-      showCharCounter: raw?.showCharCounter !== false,
       provider,
       blockedDomains,
+      targetLanguage,
+      disabledSourceLanguages: normalizeDisabledSourceLanguages(
+        raw?.disabledSourceLanguages
+      ),
     };
   }
 
