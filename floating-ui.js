@@ -12,6 +12,8 @@
 
   const LOADING_ICON = `<svg class="input-translate-spinner" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="14 42"/></svg>`;
 
+  const ERROR_ICON = `<svg class="input-translate-error-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5L22 20.5H2L12 3.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.5" r="1.1" fill="currentColor"/></svg>`;
+
   function escapeXml(value) {
     return String(value)
       .replace(/&/g, '&amp;')
@@ -117,8 +119,6 @@
 
   function create({ onTranslate }) {
     let button = null;
-    let toast = null;
-    let toastTimer = null;
 
     function ensureButton() {
       if (button) return;
@@ -132,12 +132,18 @@
       document.documentElement.appendChild(button);
     }
 
+    function clearErrorState() {
+      if (!button) return;
+      button.classList.remove('input-translate-btn--error');
+    }
+
     function setTranslate({
       sourceLanguage = 'ru',
       targetLanguage = 'en',
       quota = null,
     } = {}) {
       ensureButton();
+      clearErrorState();
       button.disabled = false;
 
       const icon = buildTranslateIcon(sourceLanguage, targetLanguage);
@@ -172,25 +178,31 @@
       setTranslate,
       setLoading() {
         ensureButton();
+        clearErrorState();
         button.innerHTML = LOADING_ICON;
         button.disabled = true;
         button.removeAttribute('title');
       },
-      hide() {
-        if (button) button.hidden = true;
-      },
-      showToast(message) {
-        if (!toast) {
-          toast = document.createElement('div');
-          toast.id = 'input-translate-toast';
-          document.documentElement.appendChild(toast);
+      setError(message) {
+        ensureButton();
+        const text = String(message || 'Перевод не удался');
+        button.classList.add('input-translate-btn--error');
+        button.innerHTML = ERROR_ICON;
+        button.disabled = false;
+        button.title = text;
+        button.setAttribute('aria-label', text);
+        button.hidden = false;
+
+        if (!button.style.left || !button.style.top) {
+          const margin = 24;
+          button.style.left = `${Math.max(margin, window.innerWidth - BUTTON_SIZE - margin)}px`;
+          button.style.top = `${Math.max(margin, window.innerHeight - BUTTON_SIZE - margin)}px`;
         }
-        toast.textContent = message;
-        toast.hidden = false;
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => {
-          toast.hidden = true;
-        }, 3000);
+      },
+      hide() {
+        if (!button) return;
+        clearErrorState();
+        button.hidden = true;
       },
     };
   }

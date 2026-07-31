@@ -83,31 +83,22 @@
   cursor: wait;
 }
 
+#input-translate-btn.input-translate-btn--error {
+  background: #f3e4e0;
+  color: #a14a3a;
+}
+
+#input-translate-btn.input-translate-btn--error:hover:not(:disabled) {
+  background: #ebd6d0;
+}
+
+#input-translate-btn .input-translate-error-icon {
+  position: relative;
+  z-index: 1;
+  display: block;
+  flex-shrink: 0;
+}
+
 #input-translate-btn[hidden] {
-  display: none !important;
-}
-
-#input-translate-toast {
-  all: initial;
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2147483647;
-  max-width: 320px;
-  padding: 10px 16px;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
-  font-size: 13px;
-  line-height: 1.4;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-#input-translate-toast[hidden] {
   display: none !important;
 }

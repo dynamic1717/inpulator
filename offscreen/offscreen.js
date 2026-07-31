@@ -17,6 +17,33 @@ function pairKey(source, target) {
   return `${source}|${target}`;
 }
 
+function pairLabel(source, target) {
+  return `${String(source).toUpperCase()}→${String(target).toUpperCase()}`;
+}
+
+function packUnavailableMessage(sourceLanguage, targetLanguage) {
+  return `Не удалось скачать языковой пакет Chrome для ${pairLabel(sourceLanguage, targetLanguage)}. Скачивание для этой пары недоступно.`;
+}
+
+function isGenericTranslatorFailure(error) {
+  const raw = String(error?.message || error || '').toLowerCase();
+  return (
+    error?.name === 'UnknownError' ||
+    error?.name === 'NotSupportedError' ||
+    raw.includes('generic failure') ||
+    raw.includes('not supported') ||
+    raw.includes('unavailable')
+  );
+}
+
+function formatTranslatorInstallError(error, sourceLanguage, targetLanguage) {
+  const raw = String(error?.message || error || '');
+  if (isGenericTranslatorFailure(error)) {
+    return packUnavailableMessage(sourceLanguage, targetLanguage);
+  }
+  return raw || packUnavailableMessage(sourceLanguage, targetLanguage);
+}
+
 function assertTranslatorApi() {
   if (!('Translator' in globalThis)) {
     throw new Error('Chrome Translator API недоступен. Нужен Chrome 138+ (desktop).');
@@ -81,9 +108,7 @@ async function getTranslator(sourceLanguage, targetLanguage) {
     targetLanguage,
   });
   if (availability === 'unavailable') {
-    throw new Error(
-      `Chrome Translator: пара ${sourceLanguage}→${targetLanguage} недоступна`
-    );
+    throw new Error(packUnavailableMessage(sourceLanguage, targetLanguage));
   }
 
   const needsDownload =
@@ -123,9 +148,28 @@ async function getTranslator(sourceLanguage, targetLanguage) {
   } catch (error) {
     installInProgress = false;
     modelStatus.downloading = false;
-    modelStatus.error = error.message || 'Не удалось скачать пакеты';
+
+    let availability = modelStatus.availability;
+    try {
+      availability = await globalThis.Translator.availability({
+        sourceLanguage,
+        targetLanguage,
+      });
+      modelStatus.availability = availability;
+    } catch {
+      // Keep previous availability if the follow-up check fails.
+    }
+
+    const message =
+      availability === 'unavailable'
+        ? packUnavailableMessage(sourceLanguage, targetLanguage)
+        : formatTranslatorInstallError(error, sourceLanguage, targetLanguage);
+    modelStatus.error = message;
+    if (availability === 'unavailable' || isGenericTranslatorFailure(error)) {
+      modelStatus.availability = 'unavailable';
+    }
     broadcastStatus();
-    throw error;
+    throw new Error(message);
   }
 }
 
@@ -135,6 +179,10 @@ async function ensureModel(sourceLanguage, targetLanguage) {
     modelStatus.availability === 'unavailable' ||
     modelStatus.availability === 'unsupported'
   ) {
+    if (modelStatus.availability === 'unavailable' && !modelStatus.error) {
+      modelStatus.error = packUnavailableMessage(sourceLanguage, targetLanguage);
+      broadcastStatus();
+    }
     return snapshotStatus();
   }
   if (

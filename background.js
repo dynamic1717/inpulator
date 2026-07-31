@@ -75,7 +75,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           availability: 'unsupported',
           downloading: false,
           progress: 0,
-          error: error.message || 'Не удалось проверить статус',
+          error: error.message || 'Cannot get model status',
         })
       );
     return true;
@@ -95,7 +95,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           availability: 'unsupported',
           downloading: false,
           progress: 0,
-          error: error.message || 'Не удалось скачать модель',
+          error: error.message || 'Cannot download model',
         })
       );
     return true;
@@ -121,7 +121,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   translate(message.text, { sourceLanguage: message.sourceLanguage })
     .then(sendResponse)
-    .catch((error) => sendResponse({ error: error.message || 'Перевод не удался' }));
+    .catch((error) => sendResponse({ error: error.message || 'Translation failed' }));
   return true;
 });
 

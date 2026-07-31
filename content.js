@@ -39,7 +39,7 @@
   function notifyReloadNeeded() {
     if (window.__inputTranslateReloadNotified) return;
     window.__inputTranslateReloadNotified = true;
-    ui?.showToast('Перезагрузите страницу, чтобы использовать Inpulator');
+    ui?.setError('Перезагрузите страницу, чтобы использовать Inpulator');
   }
 
   function handleInvalidatedContext(error) {
@@ -49,7 +49,6 @@
     window.__inputTranslateInvalidated = true;
     InputTranslate.extension?.markExtensionInvalidated?.();
     notifyReloadNeeded();
-    hideButton();
     return true;
   }
 
@@ -252,14 +251,13 @@
       }
       await contextTools.applyTranslation(snapshot, response.translatedText);
       hideButton();
-    } catch (error) {
-      if (handleInvalidatedContext(error)) return;
-      hideButton();
-      ui.showToast(error.message || 'Перевод не удался');
-    } finally {
-      isTranslating = false;
       activeContext = null;
       renderedContext = null;
+    } catch (error) {
+      if (handleInvalidatedContext(error)) return;
+      ui.setError(error.message || 'Перевод не удался');
+    } finally {
+      isTranslating = false;
     }
   }
 

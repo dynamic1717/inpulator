@@ -73,12 +73,12 @@ replace text (native / editable / clipboard)
 | `selection-context.js`           | Контекст выделения, позиция и замена текста                 |
 | `selection-observer.js`          | Батчинг событий выделения и viewport                        |
 | `runtime-client.js`              | Кэширование quota и обмен сообщениями с background          |
-| `floating-ui.js`                 | DOM кнопки (динамическая пара на SVG) и toast               |
+| `floating-ui.js`                 | DOM кнопки (динамическая пара на SVG) и error-state         |
 | `background.js`                  | Relay сообщений, hotkey, иконка action, Chrome model status |
 | `translation/languages.js`       | ES-модуль реестра языков                                    |
 | `translation/language-detect.js` | ES-модуль детекции (для тестов / shared logic)              |
 | `translation/`                   | Контракт, text-utils, Google/MyMemory/Chrome, сервис        |
-| `styles.css`                     | Стили кнопки и toast                                        |
+| `styles.css`                     | Стили кнопки (включая error-state)                          |
 | `icons/*-disabled.png`           | Grayscale-иконки при выключенном расширении                 |
 
 ### Permissions
@@ -241,9 +241,9 @@ On-device через offscreen document (`offscreen/offscreen.js`). Service work
 - Иконка кнопки: SVG с `shortLabel` source (верх) и target (низ)
 - Hotkey: **Alt+Shift+T** (`chrome.commands` → background → content script)
 - Loading: спиннер на кнопке
-- Ошибки: toast внизу экрана
+- Ошибки: алерт-иконка на кнопке, полный текст в `title` / `aria-label`
 - Ctrl+Z работает после замены (через `insertText` / native value)
-- Extension context invalidated → toast «Reload page to use Inpulator»
+- Extension context invalidated → алерт на кнопке «Reload page to use Inpulator»
 
 ## Безопасность
 
