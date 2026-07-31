@@ -74,9 +74,9 @@ export function createGoogleProvider({
       });
     } catch {
       if (controller.signal.aborted) {
-        throw new Error('Превышено время ожидания перевода');
+        throw new Error('Translation request timed out');
       }
-      throw new Error('Ошибка сети');
+      throw new Error('Network error');
     } finally {
       clearTimeout(timeoutId);
     }
@@ -85,13 +85,13 @@ export function createGoogleProvider({
     if (!response.ok) {
       throw new Error(
         data?.error?.message
-          ? `Ошибка Google Translate: ${data.error.message}`
-          : `Ошибка Google Translate API: ${response.status}`
+          ? `Google Translate error: ${data.error.message}`
+          : `Google Translate API error: ${response.status}`
       );
     }
 
     const translated = data?.data?.translations?.[0]?.translatedText;
-    if (!translated) throw new Error('Перевод не удался');
+    if (!translated) throw new Error('Translation failed');
     return translated;
   }
 
@@ -104,7 +104,7 @@ export function createGoogleProvider({
         const currentApiKey = await getApiKey();
         if (!currentApiKey) {
           throw new Error(
-            'Ключ Google API не найден. Добавьте его в настройках расширения.'
+            'Google API key not found. Add it in the extension settings.'
           );
         }
 
@@ -112,7 +112,7 @@ export function createGoogleProvider({
         const quota = await getQuota();
         if (content.length > quota.remaining) {
           throw new Error(
-            `Недостаточно лимита: ${content.length} символов выбрано, ${quota.remaining} осталось`
+            `Not enough quota: ${content.length} characters selected, ${quota.remaining} remaining`
           );
         }
 

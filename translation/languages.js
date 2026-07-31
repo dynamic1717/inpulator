@@ -14,7 +14,7 @@ export const LANGUAGES = Object.freeze([
     id: 'ru',
     name: 'Русский',
     flag: '🇷🇺',
-    shortLabel: 'РУ',
+    shortLabel: 'RU',
     shipped: true,
     scripts: [/[\u0400-\u04FF]/],
     providerCodes: { google: 'ru', mymemory: 'ru', chrome: 'ru' },

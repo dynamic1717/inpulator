@@ -1,15 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Inpulator",
-  "version": "1.2.0",
-  "description": "Перевод выделенного текста в полях ввода на выбранный язык.",
+  "version": "1.3.0",
+  "description": "Translate selected text in input fields to your chosen language.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "Inpulator — Перевод текста",
+    "default_title": "Inpulator — Translate text",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -38,7 +38,7 @@
         "default": "Alt+Shift+T",
         "mac": "Option+Shift+T"
       },
-      "description": "Перевести выделенный текст на выбранный язык"
+      "description": "Translate the selected text to the chosen language"
     }
   },
   "content_scripts": [

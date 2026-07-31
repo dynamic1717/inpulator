@@ -48,7 +48,7 @@ test('google provider reports a timeout when the request is aborted', async () =
       }),
   });
 
-  await assert.rejects(provider.translate('тест'), /Превышено время ожидания/);
+  await assert.rejects(provider.translate('тест'), /Translation request timed out/);
 });
 
 test('google provider is unavailable without api key', async () => {

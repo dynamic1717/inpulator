@@ -39,7 +39,7 @@
   function notifyReloadNeeded() {
     if (window.__inputTranslateReloadNotified) return;
     window.__inputTranslateReloadNotified = true;
-    ui?.setError('Перезагрузите страницу, чтобы использовать Inpulator');
+    ui?.setError('Reload the page to use updated Inpulator');
   }
 
   function handleInvalidatedContext(error) {
@@ -243,11 +243,11 @@
       const sourceLanguage =
         (await InputTranslate.languageDetect?.resolveSourceLanguage(snapshot)) || null;
       if (!sourceLanguage) {
-        throw new Error('Не удалось определить язык текста');
+        throw new Error('Could not detect the text language');
       }
       const response = await runtime.translate(snapshot.text, { sourceLanguage });
       if (!contextTools.isCurrent(snapshot)) {
-        throw new Error('Выделенный текст изменился; выделите его снова');
+        throw new Error('The selection changed; select the text again');
       }
       await contextTools.applyTranslation(snapshot, response.translatedText);
       hideButton();
@@ -255,7 +255,7 @@
       renderedContext = null;
     } catch (error) {
       if (handleInvalidatedContext(error)) return;
-      ui.setError(error.message || 'Перевод не удался');
+      ui.setError(error.message || 'Translation failed');
     } finally {
       isTranslating = false;
     }

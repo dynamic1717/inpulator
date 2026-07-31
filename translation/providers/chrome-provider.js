@@ -51,7 +51,7 @@ export function createChromeProvider({
         targetLanguage: options.target,
       });
       const translated = response?.translatedText;
-      if (!translated) throw new Error('Перевод Chrome не удался');
+      if (!translated) throw new Error('Chrome translation failed');
       return `${leadingWhitespace}${translated}${trailingWhitespace}`;
     },
   };

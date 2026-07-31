@@ -22,7 +22,7 @@ function pairLabel(source, target) {
 }
 
 function packUnavailableMessage(sourceLanguage, targetLanguage) {
-  return `Не удалось скачать языковой пакет Chrome для ${pairLabel(sourceLanguage, targetLanguage)}. Скачивание для этой пары недоступно.`;
+  return `Could not download the Chrome language pack for ${pairLabel(sourceLanguage, targetLanguage)}. Download is unavailable for this pair.`;
 }
 
 function isGenericTranslatorFailure(error) {
@@ -46,7 +46,9 @@ function formatTranslatorInstallError(error, sourceLanguage, targetLanguage) {
 
 function assertTranslatorApi() {
   if (!('Translator' in globalThis)) {
-    throw new Error('Chrome Translator API недоступен. Нужен Chrome 138+ (desktop).');
+    throw new Error(
+      'Chrome Translator API is unavailable. Requires Chrome 138+ (desktop).'
+    );
   }
 }
 
@@ -91,7 +93,7 @@ async function refreshAvailability(sourceLanguage, targetLanguage) {
       availability: 'unsupported',
       downloading: false,
       progress: 0,
-      error: error.message || 'Не удалось проверить доступность',
+      error: error.message || 'Could not check availability',
     };
   }
   broadcastStatus();
@@ -207,7 +209,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     getAvailabilityCompat(message.sourceLanguage, message.targetLanguage)
       .then((availability) => sendResponse({ availability }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Не удалось проверить доступность' })
+        sendResponse({ error: error.message || 'Could not check availability' })
       );
     return true;
   }
@@ -216,7 +218,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     refreshAvailability(message.sourceLanguage, message.targetLanguage)
       .then((status) => sendResponse({ status }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Не удалось проверить статус' })
+        sendResponse({ error: error.message || 'Could not check status' })
       );
     return true;
   }
@@ -225,7 +227,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     ensureModel(message.sourceLanguage, message.targetLanguage)
       .then((status) => sendResponse({ status }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Не удалось скачать модель' })
+        sendResponse({ error: error.message || 'Could not download the model' })
       );
     return true;
   }
@@ -234,7 +236,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     translateText(message.text, message.sourceLanguage, message.targetLanguage)
       .then((translatedText) => sendResponse({ translatedText }))
       .catch((error) =>
-        sendResponse({ error: error.message || 'Перевод Chrome не удался' })
+        sendResponse({ error: error.message || 'Chrome translation failed' })
       );
     return true;
   }

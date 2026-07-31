@@ -4,103 +4,101 @@
 
 # Inpulator
 
-Переводите мысль **прямо в поле ввода** — в чате, почте или форме. Без вкладки переводчика, без копипаста.
+Translate your thoughts **right in the input field** — in chat, email, or forms. No translator tab, no copy-paste.
 
-Выделили текст → нажали кнопку или горячую клавишу → на месте уже перевод на выбранный язык.
+Select text → press the button or shortcut → the selection is replaced with a translation into your chosen language.
 
-## Зачем
+## Why
 
-Пишете на одном языке, а думаете на другом? Обычный путь: набрать → открыть переводчик → скопировать → вставить. Inpulator сокращает это до двух действий: **выделить и перевести**.
+Writing in one language while thinking in another? The usual path: type → open a translator → copy → paste. Inpulator shortens that to two actions: **select and translate**.
 
-## Возможности
+## Features
 
-- **Перевод на месте** — выделение заменяется переводом в том же поле
-- **Несколько языков** — английский, русский, испанский, французский, немецкий, китайский; целевой язык выбирается в настройках
-- **Автоопределение источника** — язык выделения определяется автоматически
-- **Плавающая кнопка** — рядом с выделением; на иконке коды пары (например `ES→EN`)
-- **Горячая клавиша** — `Alt+Shift+T` (на macOS: `Option+Shift+T`)
-- **Три провайдера** — MyMemory по умолчанию, Chrome Translator (on-device), Google Translate
-- **Индикатор лимита** — кольцо использования вокруг кнопки; точные цифры в тултипе
-- **Настройки** — провайдер, целевой язык, исключения языков и сайтов, Google API key, вкл/выкл
-- **Широкая поддержка полей** — `<input>`, `<textarea>`, `contenteditable` (Gmail, ChatGPT, Slack и др.), включая Shadow DOM
-- **Понятные состояния** — спиннер при загрузке, алерт на кнопке при ошибке
+- **In-place translation** — the selection is replaced in the same field
+- **Multiple languages** — English, Russian, Spanish, French, German, Chinese; target language is chosen in settings
+- **Auto-detect source** — the selection language is detected automatically
+- **Circular floating button** — next to the selection; icon shows pair codes (`ES → EN`); quota usage as a progress ring
+- **Tooltip** — `ES → EN` or `ES → EN · 12% used` (exact counts live in settings)
+- **Shortcut** — `Alt+Shift+T` (on macOS: `Option+Shift+T`)
+- **Three providers** — MyMemory by default, Chrome Translator (on-device), Google Translate
+- **Settings** — segmented provider control, target language, Advanced (skip-languages combobox + change shortcut), Chrome packs, Google API key, on/off, per-site toggle
+- **Wide field support** — `<input>`, `<textarea>`, `contenteditable` (Gmail, ChatGPT, Slack, etc.), including Shadow DOM
+- **Clear states** — spinner while loading; alert icon on the button when something fails (no toast)
 
-## Как пользоваться
+## How to use
 
-1. В настройках выберите язык **«Переводить на»** (по умолчанию English)
-2. Введите текст в любое поддерживаемое поле
-3. Выделите фрагмент для перевода
-4. Нажмите кнопку перевода **или** горячую клавишу
-5. Выделение заменится переводом
+1. In settings, choose **Translate to** (default: English)
+2. Type into any supported field
+3. Select the fragment to translate
+4. Press the translate button **or** the shortcut
+5. The selection is replaced with the translation
 
-Кнопка появляется, если язык выделения отличается от целевого и не исключён в настройках. Исчезает, когда выделение снято.
+The button appears when the selection language differs from the target and is not excluded. It disappears when the selection is cleared.
 
-Откройте настройки по иконке расширения: целевой язык, исключения языков/сайтов, провайдер, пакеты Chrome или Google API key.
+Open settings from the extension icon: target language, site toggle, provider (MyMemory / On-device / Google), Chrome packs or Google API key, and Advanced for skip languages / shortcut.
 
-## Горячая клавиша
+## Shortcut
 
-| Платформа       | Комбинация       |
+| Platform        | Combination      |
 | --------------- | ---------------- |
 | Windows / Linux | `Alt+Shift+T`    |
 | macOS           | `Option+Shift+T` |
 
-Переназначить: `chrome://extensions/shortcuts`
+Remap at: `chrome://extensions/shortcuts` (also linked from Advanced in the popup).
 
-## Языки
+## Languages
 
-| Код | Язык     |
-| --- | -------- |
-| en  | English  |
-| ru  | Русский  |
-| es  | Español  |
-| fr  | Français |
-| de  | Deutsch  |
-| zh  | 中文     |
+| Code | Language | Button label |
+| ---- | -------- | ------------ |
+| en   | English  | `EN`         |
+| ru   | Русский  | `RU`         |
+| es   | Español  | `ES`         |
+| fr   | Français | `FR`         |
+| de   | Deutsch  | `DE`         |
+| zh   | 中文     | `ZH`         |
 
-- **Целевой язык** — селект в настройках
-- **Не переводить с** — исключённые источники; можно исключить язык текущего выделения или выбрать из списка
-- **Сайт** — переключатель «Включить на этом сайте» добавляет/убирает домен из блок-листа
+- **Target language** — listbox in settings
+- **Skip languages** — excluded sources in Advanced; chip for language detected on the page, or typeahead in the combobox
+- **Site** — the “This site” toggle adds/removes the domain from the block list
 
-## Провайдеры и лимиты
+## Providers and limits
 
-| Провайдер         | Лимит (локальный)   | Примечание                                               |
-| ----------------- | ------------------- | -------------------------------------------------------- |
-| MyMemory          | **50 000 / день**   | По умолчанию; облачный сервис, текст уходит на MyMemory  |
-| Chrome Translator | **Без лимита**      | On-device, Chrome 138+ desktop                           |
-| Google Translate  | **500 000 / месяц** | Нужен личный API key в настройках; текст уходит в Google |
+| Provider          | Limit (local)       | Notes                                                          |
+| ----------------- | ------------------- | -------------------------------------------------------------- |
+| MyMemory          | **50,000 / day**    | Default; cloud service, text is sent to MyMemory               |
+| Chrome Translator | **No limit**        | On-device, Chrome 138+ desktop; no progress ring on the button |
+| Google Translate  | **500,000 / month** | Requires your own API key in settings; text is sent to Google  |
 
-Всегда используется **только выбранный** провайдер — без автоматического переключения. Если он недоступен или лимит исчерпан, выберите другой в настройках.
+Google/MyMemory counters are stored locally and are an **estimate**, not exact API billing.
 
-Счётчики Google/MyMemory хранятся локально и являются **оценкой**, а не точным биллингом API.
+For Chrome Translator, packs are downloaded **for the needed language pair** (from selection and target) — in settings or automatically on the first translation. Browser pack management: `chrome://on-device-translation-internals`.
 
-Для Chrome Translator пакеты качаются **для нужной пары языков** (по выделению и целевому языку) — в настройках или автоматически при первом переводе. Управление пакетами в браузере: `chrome://on-device-translation-internals`.
+## Limitations
 
-## Ограничения
+- Chrome Translator: **Chrome 138+ desktop** (not mobile)
+- The button does not appear when source equals target, or the source is excluded
+- Does not work in **cross-origin iframes**
+- Rich text inserts plain text — formatting is lost
+- After updating the extension, **reload the tab** (F5)
 
-- Chrome Translator: **Chrome 138+ desktop** (не mobile)
-- Кнопка не появляется, если источник = целевой язык или источник в исключениях
-- Не работает в **cross-origin iframe**
-- В rich text вставляется plain text — форматирование теряется
-- После обновления расширения **перезагрузите вкладку** (F5)
+## Install
 
-## Установка
+### From source
 
-### Из исходников
+1. Download or clone the repository
+2. Open `chrome://extensions`
+3. Enable **Developer mode**
+4. **Load unpacked** → select the project folder
+5. (Optional) For Google Translate, create a personal [Cloud Translation API](https://cloud.google.com/translate/docs/basic/translating-text) key, restrict it to Translation API and a quota, then add it in settings
 
-1. Скачайте или клонируйте репозиторий
-2. Откройте `chrome://extensions`
-3. Включите **Режим разработчика**
-4. **Загрузить распакованное расширение** → выберите папку проекта
-5. (Опционально) Для Google Translate создайте личный ключ [Cloud Translation API](https://cloud.google.com/translate/docs/basic/translating-text), ограничьте его Translation API и квотой, затем добавьте в настройки
+### Update
 
-### Обновление
+1. Download the latest repository version
+2. Replace the current project folder with the new one
+3. `chrome://extensions` → reload the extension
+4. Reload open tabs
 
-1. Скачайте последнюю версию репозитория
-2. Замените текущую папку проекта новой
-3. `chrome://extensions` → обновить расширение
-4. Перезагрузите открытые вкладки
-
-## Проверки кода
+## Checks
 
 ```bash
 npm install
@@ -109,17 +107,17 @@ npm run lint
 npm run format:check
 ```
 
-## Приватность
+## Privacy
 
-- **Chrome Translator** — перевод on-device, текст не уходит на внешний сервер
-- **Google / MyMemory** — текст отправляется только если вы сами выбрали этот провайдер
-- Локально хранятся: настройки, счётчики usage и личный Google API key (`chrome.storage.local`)
-- Не передавайте API key другим людям; ограничьте его Cloud Translation API и квотами
+- **Chrome Translator** — on-device translation; text does not leave the device
+- **Google / MyMemory** — text is sent only if you chose that provider
+- Stored locally: settings, usage counters, MyMemory email, and your Google API key (`chrome.storage.local`)
+- Do not share your API key; restrict it to Cloud Translation API and quotas
 
-## Документация для разработчиков
+## Developer docs
 
-Техническая документация, архитектура, структура файлов: [DOCUMENTATION.md](DOCUMENTATION.md)
+Technical documentation, architecture, file layout: [DOCUMENTATION.md](DOCUMENTATION.md)
 
-## Стек
+## Stack
 
 JavaScript (vanilla) · Manifest V3 · Chrome Translator API · Google Cloud Translation · MyMemory

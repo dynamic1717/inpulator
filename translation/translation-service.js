@@ -74,15 +74,15 @@ export function createTranslationService({
       if (!available) {
         if (preferredId === PROVIDER_GOOGLE) {
           throw new Error(
-            'Ключ Google API не найден. Добавьте его в настройках расширения.'
+            'Google API key not found. Add it in the extension settings.'
           );
         }
         if (preferredId === PROVIDER_CHROME) {
           throw new Error(
-            `Переводчик Chrome недоступен. Скачайте пакет ${mappedPair.source}→${mappedPair.target} или выберите другого провайдера.`
+            `Chrome Translator is unavailable. Download the ${mappedPair.source}→${mappedPair.target} pack or choose another provider.`
           );
         }
-        throw new Error(`Провайдер ${provider.id} недоступен`);
+        throw new Error(`Provider ${provider.id} is unavailable`);
       }
 
       return translateWithProvider(provider, text, pair);

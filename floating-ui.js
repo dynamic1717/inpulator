@@ -34,7 +34,7 @@
   }
 
   function buildTranslateIcon(sourceLanguage, targetLanguage) {
-    const source = escapeXml(getShortLabel(sourceLanguage, 'РУ'));
+    const source = escapeXml(getShortLabel(sourceLanguage, 'RU'));
     const target = escapeXml(getShortLabel(targetLanguage, 'EN'));
 
     return `<svg class="input-translate-icon" width="28" height="28" viewBox="0 0 62 62" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -126,7 +126,7 @@
       button = document.createElement('button');
       button.id = 'input-translate-btn';
       button.type = 'button';
-      button.setAttribute('aria-label', 'Перевести');
+      button.setAttribute('aria-label', 'Translate');
       button.addEventListener('mousedown', (event) => event.preventDefault());
       button.addEventListener('click', onTranslate);
       document.documentElement.appendChild(button);
@@ -148,14 +148,14 @@
 
       const icon = buildTranslateIcon(sourceLanguage, targetLanguage);
       const targetName = getLanguageName(targetLanguage, targetLanguage);
-      const pairLabel = `${getShortLabel(sourceLanguage, 'РУ')} → ${getShortLabel(targetLanguage, 'EN')}`;
+      const pairLabel = `${getShortLabel(sourceLanguage, 'RU')} → ${getShortLabel(targetLanguage, 'EN')}`;
       const usageRatio = getUsageRatio(quota);
       const usedPercent = formatUsedPercent(usageRatio);
 
       const ring = quota && quota.limit != null ? buildProgressRing(usageRatio) : '';
 
       button.innerHTML = `${ring}${icon}`;
-      button.setAttribute('aria-label', `Перевести на ${targetName}`);
+      button.setAttribute('aria-label', `Translate to ${targetName}`);
       button.title = usedPercent ? `${pairLabel} · ${usedPercent} used` : pairLabel;
     }
 
@@ -185,7 +185,7 @@
       },
       setError(message) {
         ensureButton();
-        const text = String(message || 'Перевод не удался');
+        const text = String(message || 'Translation failed');
         button.classList.add('input-translate-btn--error');
         button.innerHTML = ERROR_ICON;
         button.disabled = false;

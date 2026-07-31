@@ -113,7 +113,7 @@ test('service does not fall back when selected chrome is unavailable', async () 
 
   await assert.rejects(
     service.translate('тест', { sourceLanguage: 'ru' }),
-    /Переводчик Chrome недоступен/
+    /Chrome Translator is unavailable/
   );
   assert.deepEqual(counts(), { chromeCalls: 0, googleCalls: 0, mymemoryCalls: 0 });
 });
@@ -150,7 +150,7 @@ test('service errors when google is selected without api key', async () => {
 
   await assert.rejects(
     service.translate('тест', { sourceLanguage: 'ru' }),
-    /Ключ Google API не найден/
+    /Google API key not found/
   );
 });
 
