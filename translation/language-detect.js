@@ -1,4 +1,4 @@
-import { getShippedLanguages, normalizeLanguageId } from './languages.js';
+import { getLanguage, getShippedLanguages, normalizeLanguageId } from './languages.js';
 
 const CYRILLIC_RE = /[\u0400-\u04FF]/;
 const HAN_RE = /[\u4E00-\u9FFF]/;
@@ -16,6 +16,13 @@ function countMatches(text, regex) {
     regex.flags.includes('g') ? regex.flags : `${regex.flags}g`
   );
   return (text.match(global) || []).length;
+}
+
+/** CLD3 often labels short Latin words as zh/other; require the expected script. */
+function languageScriptMatches(text, languageId) {
+  const scripts = getLanguage(languageId)?.scripts;
+  if (!Array.isArray(scripts) || scripts.length === 0) return true;
+  return scripts.some((re) => re.test(text));
 }
 
 /** Script / diacritic heuristic when CLD is missing or unreliable. */
@@ -82,15 +89,17 @@ export async function detectSourceLanguage(text, deps = {}) {
       );
       for (const entry of ranked) {
         const id = normalizeLanguageId(entry.language);
-        if (id) {
-          if (result?.isReliable !== false || (entry.percentage || 0) >= 50) {
-            return id;
-          }
+        if (!id || !languageScriptMatches(sample, id)) continue;
+        if (result?.isReliable !== false || (entry.percentage || 0) >= 50) {
+          return id;
         }
       }
       // Unreliable but we have a mapped top hit — still prefer CLD over weak fallback
       // only when percentage is decent; otherwise fall through.
-      const top = ranked[0];
+      const top = ranked.find((entry) => {
+        const id = normalizeLanguageId(entry.language);
+        return id && languageScriptMatches(sample, id);
+      });
       const topId = top ? normalizeLanguageId(top.language) : null;
       if (topId && (top.percentage || 0) >= 40) return topId;
     } catch {

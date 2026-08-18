@@ -23,6 +23,13 @@
     return (text.match(global) || []).length;
   }
 
+  /** CLD3 often labels short Latin words as zh/other; require the expected script. */
+  function languageScriptMatches(text, languageId, languagesApi) {
+    const scripts = languagesApi?.getLanguage?.(languageId)?.scripts;
+    if (!Array.isArray(scripts) || scripts.length === 0) return true;
+    return scripts.some((re) => re.test(text));
+  }
+
   function detectSourceLanguageFallback(text) {
     const languagesApi = window.InputTranslate.languages;
     const sample = String(text || '');
@@ -79,13 +86,15 @@
         );
         for (const entry of ranked) {
           const id = languagesApi?.normalizeLanguageId(entry.language);
-          if (id) {
-            if (result?.isReliable !== false || (entry.percentage || 0) >= 50) {
-              return id;
-            }
+          if (!id || !languageScriptMatches(sample, id, languagesApi)) continue;
+          if (result?.isReliable !== false || (entry.percentage || 0) >= 50) {
+            return id;
           }
         }
-        const top = ranked[0];
+        const top = ranked.find((entry) => {
+          const id = languagesApi?.normalizeLanguageId(entry.language);
+          return id && languageScriptMatches(sample, id, languagesApi);
+        });
         const topId = top ? languagesApi?.normalizeLanguageId(top.language) : null;
         if (topId && (top.percentage || 0) >= 40) return topId;
       } catch {
