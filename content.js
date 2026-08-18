@@ -36,19 +36,13 @@
     );
   }
 
-  function notifyReloadNeeded() {
-    if (window.__inputTranslateReloadNotified) return;
-    window.__inputTranslateReloadNotified = true;
-    ui?.setError('Reload the page to use updated Inpulator');
-  }
-
   function handleInvalidatedContext(error) {
     if (!String(error?.message || error).includes('Extension context invalidated')) {
       return false;
     }
     window.__inputTranslateInvalidated = true;
     InputTranslate.extension?.markExtensionInvalidated?.();
-    notifyReloadNeeded();
+    hideButton();
     return true;
   }
 
@@ -148,7 +142,7 @@
   }
 
   async function syncButtonWithSelection(event) {
-    if (!isActive()) return notifyReloadNeeded();
+    if (!isActive()) return hideButton();
     if (!isExtensionEnabled()) return hideButton();
     if (isTranslating || ui.contains(event?.target)) return;
 
@@ -208,8 +202,7 @@
   }
 
   async function onHotkeyTranslate() {
-    if (!isActive()) return notifyReloadNeeded();
-    if (!isExtensionEnabled() || isTranslating) return;
+    if (!isActive() || !isExtensionEnabled() || isTranslating) return;
 
     const now = Date.now();
     if (now - lastHotkeyAt < 400) return;
