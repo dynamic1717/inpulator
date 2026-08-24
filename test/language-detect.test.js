@@ -31,6 +31,30 @@ test('fallback prefers french diacritics', () => {
   assert.equal(detectSourceLanguageFallback('Ça été déjà'), 'fr');
 });
 
+test('fallback prefers portuguese tilde over plain latin', () => {
+  assert.equal(detectSourceLanguageFallback('São Paulo'), 'pt');
+});
+
+test('fallback detects arabic', () => {
+  assert.equal(detectSourceLanguageFallback('مرحبا'), 'ar');
+});
+
+test('fallback detects hindi', () => {
+  assert.equal(detectSourceLanguageFallback('नमस्ते'), 'hi');
+});
+
+test('fallback detects hangul as korean', () => {
+  assert.equal(detectSourceLanguageFallback('안녕하세요'), 'ko');
+});
+
+test('fallback detects kana as japanese', () => {
+  assert.equal(detectSourceLanguageFallback('こんにちは'), 'ja');
+});
+
+test('fallback treats kana plus kanji as japanese not chinese', () => {
+  assert.equal(detectSourceLanguageFallback('日本語です'), 'ja');
+});
+
 test('detectSourceLanguage uses CLD when reliable', async () => {
   const id = await detectSourceLanguage('bonjour', {
     detectLanguage: async () => ({
@@ -48,6 +72,49 @@ test('detectSourceLanguage falls back when CLD fails', async () => {
     },
   });
   assert.equal(id, 'ru');
+});
+
+test('detectSourceLanguage ignores CLD chinese for latin-only text', async () => {
+  const id = await detectSourceLanguage('stars', {
+    detectLanguage: async () => ({
+      isReliable: true,
+      languages: [{ language: 'zh', percentage: 100 }],
+    }),
+  });
+  assert.equal(id, 'en');
+});
+
+test('detectSourceLanguage keeps CLD chinese when han is present', async () => {
+  const id = await detectSourceLanguage('你好', {
+    detectLanguage: async () => ({
+      isReliable: true,
+      languages: [{ language: 'zh', percentage: 100 }],
+    }),
+  });
+  assert.equal(id, 'zh');
+});
+
+test('detectSourceLanguage skips CLD chinese when kana is present', async () => {
+  const id = await detectSourceLanguage('こんにちは世界', {
+    detectLanguage: async () => ({
+      isReliable: true,
+      languages: [{ language: 'zh', percentage: 100 }],
+    }),
+  });
+  assert.equal(id, 'ja');
+});
+
+test('detectSourceLanguage skips script-mismatched CLD hit', async () => {
+  const id = await detectSourceLanguage('stars', {
+    detectLanguage: async () => ({
+      isReliable: true,
+      languages: [
+        { language: 'zh', percentage: 90 },
+        { language: 'en', percentage: 10 },
+      ],
+    }),
+  });
+  assert.equal(id, 'en');
 });
 
 test('canTranslateSource respects target and disabled list', () => {

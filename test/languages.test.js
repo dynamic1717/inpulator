@@ -13,12 +13,16 @@ test('normalizeLanguageId maps aliases to shipped ids', () => {
   assert.equal(normalizeLanguageId('ZH_TW'), 'zh');
   assert.equal(normalizeLanguageId('deu'), 'de');
   assert.equal(normalizeLanguageId('en'), 'en');
+  assert.equal(normalizeLanguageId('pt-BR'), 'pt');
+  assert.equal(normalizeLanguageId('jpn'), 'ja');
+  assert.equal(normalizeLanguageId('ko'), 'ko');
+  assert.equal(normalizeLanguageId('ar'), 'ar');
+  assert.equal(normalizeLanguageId('hi'), 'hi');
 });
 
-test('normalizeLanguageId rejects unshipped languages', () => {
-  assert.equal(normalizeLanguageId('ar'), null);
-  assert.equal(normalizeLanguageId('hi'), null);
-  assert.equal(normalizeLanguageId('ja'), null);
+test('normalizeLanguageId rejects unknown languages', () => {
+  assert.equal(normalizeLanguageId('th'), null);
+  assert.equal(normalizeLanguageId('he'), null);
 });
 
 test('mapLanguageCodes maps chinese for google and chrome', () => {
@@ -43,6 +47,18 @@ test('getChromeProbePair prefers detected source language', () => {
   assert.deepEqual(getChromeProbePair('en', 'en'), { source: 'ru', target: 'en' });
 });
 
-test('shipped language ids are the v1 set', () => {
-  assert.deepEqual(getShippedLanguageIds(), ['en', 'ru', 'es', 'fr', 'de', 'zh']);
+test('shipped language ids include the new set', () => {
+  assert.deepEqual(getShippedLanguageIds(), [
+    'en',
+    'ru',
+    'es',
+    'fr',
+    'de',
+    'pt',
+    'zh',
+    'ja',
+    'ko',
+    'ar',
+    'hi',
+  ]);
 });

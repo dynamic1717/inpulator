@@ -1,4 +1,4 @@
-import { formatLanguageLabel } from './lib/format.js';
+import { appendLanguageLabel } from './lib/format.js';
 import { createLanguageOption, moveHighlight, updateHighlight } from './lib/listbox.js';
 
 export function createSkipLanguagesUi({
@@ -90,7 +90,7 @@ export function createSkipLanguagesUi({
 
       const text = document.createElement('span');
       text.className = 'popup__pill-text';
-      text.textContent = formatLanguageLabel(lang);
+      appendLanguageLabel(text, lang);
 
       const remove = document.createElement('button');
       remove.type = 'button';
@@ -118,7 +118,7 @@ export function createSkipLanguagesUi({
     suggestEl.hidden = !canSuggest;
     if (!canSuggest) return;
 
-    suggestText.textContent = formatLanguageLabel(lang);
+    appendLanguageLabel(suggestText, lang);
     suggestChip.setAttribute('aria-label', `Skip ${lang.name}`);
   }
 
@@ -130,7 +130,7 @@ export function createSkipLanguagesUi({
       listEl.appendChild(
         createLanguageOption({
           languageId: lang.id,
-          label: formatLanguageLabel(lang),
+          lang,
           onChoose: async (languageId) => {
             await addDisabledSource(languageId);
             inputEl.value = '';

@@ -4,72 +4,88 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'en',
     name: 'English',
-    flag: '🇬🇧',
+    flag: 'popup/flags/gb.svg',
     shortLabel: 'EN',
-    shipped: true,
     scripts: [/[A-Za-z]/],
     providerCodes: { google: 'en', mymemory: 'en', chrome: 'en' },
   },
   {
     id: 'ru',
     name: 'Русский',
-    flag: '🇷🇺',
+    flag: 'popup/flags/ru.svg',
     shortLabel: 'RU',
-    shipped: true,
     scripts: [/[\u0400-\u04FF]/],
     providerCodes: { google: 'ru', mymemory: 'ru', chrome: 'ru' },
   },
   {
     id: 'es',
     name: 'Español',
-    flag: '🇪🇸',
+    flag: 'popup/flags/es.svg',
     shortLabel: 'ES',
-    shipped: true,
     scripts: [/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/],
     providerCodes: { google: 'es', mymemory: 'es', chrome: 'es' },
   },
   {
     id: 'fr',
     name: 'Français',
-    flag: '🇫🇷',
+    flag: 'popup/flags/fr.svg',
     shortLabel: 'FR',
-    shipped: true,
     scripts: [/[A-Za-zÀÂÄÇÉÈÊËÎÏÔÙÛÜŸÆŒàâäçéèêëîïôùûüÿæœ]/],
     providerCodes: { google: 'fr', mymemory: 'fr', chrome: 'fr' },
   },
   {
     id: 'de',
     name: 'Deutsch',
-    flag: '🇩🇪',
+    flag: 'popup/flags/de.svg',
     shortLabel: 'DE',
-    shipped: true,
     scripts: [/[A-Za-zÄÖÜßäöü]/],
     providerCodes: { google: 'de', mymemory: 'de', chrome: 'de' },
   },
   {
+    id: 'pt',
+    name: 'Português',
+    flag: 'popup/flags/pt.svg',
+    shortLabel: 'PT',
+    scripts: [/[A-Za-zÁÀÂÃÉÊÍÓÔÕÚÜÇáàâãéêíóôõúüç]/],
+    providerCodes: { google: 'pt', mymemory: 'pt', chrome: 'pt' },
+  },
+  {
     id: 'zh',
     name: '中文',
-    flag: '🇨🇳',
+    flag: 'popup/flags/cn.svg',
     shortLabel: 'ZH',
-    shipped: true,
     scripts: [/[\u4E00-\u9FFF]/],
     providerCodes: { google: 'zh-CN', mymemory: 'zh-CN', chrome: 'zh' },
   },
   {
+    id: 'ja',
+    name: '日本語',
+    flag: 'popup/flags/jp.svg',
+    shortLabel: 'JA',
+    scripts: [/[\u3040-\u309F\u30A0-\u30FF]/],
+    providerCodes: { google: 'ja', mymemory: 'ja', chrome: 'ja' },
+  },
+  {
+    id: 'ko',
+    name: '한국어',
+    flag: 'popup/flags/kr.svg',
+    shortLabel: 'KO',
+    scripts: [/[\uAC00-\uD7AF\u1100-\u11FF]/],
+    providerCodes: { google: 'ko', mymemory: 'ko', chrome: 'ko' },
+  },
+  {
     id: 'ar',
     name: 'العربية',
-    flag: '🇸🇦',
+    flag: 'popup/flags/sa.svg',
     shortLabel: 'AR',
-    shipped: false,
     scripts: [/[\u0600-\u06FF]/],
     providerCodes: { google: 'ar', mymemory: 'ar', chrome: 'ar' },
   },
   {
     id: 'hi',
     name: 'हिन्दी',
-    flag: '🇮🇳',
+    flag: 'popup/flags/in.svg',
     shortLabel: 'HI',
-    shipped: false,
     scripts: [/[\u0900-\u097F]/],
     providerCodes: { google: 'hi', mymemory: 'hi', chrome: 'hi' },
   },
@@ -91,12 +107,22 @@ const ALIASES = Object.freeze({
   de: 'de',
   deu: 'de',
   ger: 'de',
+  pt: 'pt',
+  por: 'pt',
+  'pt-br': 'pt',
+  'pt-pt': 'pt',
   zh: 'zh',
   'zh-cn': 'zh',
   'zh-tw': 'zh',
   'zh-hans': 'zh',
   'zh-hant': 'zh',
   chi: 'zh',
+  ja: 'ja',
+  jpn: 'ja',
+  jp: 'ja',
+  ko: 'ko',
+  kor: 'ko',
+  kr: 'ko',
   ar: 'ar',
   ara: 'ar',
   hi: 'hi',
@@ -120,15 +146,15 @@ export function getShortLabel(id) {
 }
 
 export function getShippedLanguages() {
-  return LANGUAGES.filter((lang) => lang.shipped);
+  return LANGUAGES;
 }
 
 export function getShippedLanguageIds() {
-  return getShippedLanguages().map((lang) => lang.id);
+  return LANGUAGES.map((lang) => lang.id);
 }
 
 export function isShippedLanguageId(id) {
-  return Boolean(BY_ID.get(id)?.shipped);
+  return BY_ID.has(id);
 }
 
 export function normalizeLanguageId(value) {
@@ -137,9 +163,9 @@ export function normalizeLanguageId(value) {
     .toLowerCase()
     .replace(/_/g, '-');
   if (!raw) return null;
-  if (BY_ID.has(raw) && BY_ID.get(raw).shipped) return raw;
+  if (BY_ID.has(raw)) return raw;
   const aliased = ALIASES[raw] || ALIASES[raw.split('-')[0]];
-  if (aliased && BY_ID.get(aliased)?.shipped) return aliased;
+  if (aliased && BY_ID.has(aliased)) return aliased;
   return null;
 }
 
