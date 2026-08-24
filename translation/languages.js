@@ -4,7 +4,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'en',
     name: 'English',
-    flag: '🇬🇧',
+    flag: 'popup/flags/gb.svg',
     shortLabel: 'EN',
     shipped: true,
     scripts: [/[A-Za-z]/],
@@ -13,7 +13,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'ru',
     name: 'Русский',
-    flag: '🇷🇺',
+    flag: 'popup/flags/ru.svg',
     shortLabel: 'RU',
     shipped: true,
     scripts: [/[\u0400-\u04FF]/],
@@ -22,7 +22,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'es',
     name: 'Español',
-    flag: '🇪🇸',
+    flag: 'popup/flags/es.svg',
     shortLabel: 'ES',
     shipped: true,
     scripts: [/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/],
@@ -31,7 +31,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'fr',
     name: 'Français',
-    flag: '🇫🇷',
+    flag: 'popup/flags/fr.svg',
     shortLabel: 'FR',
     shipped: true,
     scripts: [/[A-Za-zÀÂÄÇÉÈÊËÎÏÔÙÛÜŸÆŒàâäçéèêëîïôùûüÿæœ]/],
@@ -40,7 +40,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'de',
     name: 'Deutsch',
-    flag: '🇩🇪',
+    flag: 'popup/flags/de.svg',
     shortLabel: 'DE',
     shipped: true,
     scripts: [/[A-Za-zÄÖÜßäöü]/],
@@ -49,7 +49,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'zh',
     name: '中文',
-    flag: '🇨🇳',
+    flag: 'popup/flags/cn.svg',
     shortLabel: 'ZH',
     shipped: true,
     scripts: [/[\u4E00-\u9FFF]/],
@@ -58,7 +58,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'ar',
     name: 'العربية',
-    flag: '🇸🇦',
+    flag: 'popup/flags/sa.svg',
     shortLabel: 'AR',
     shipped: false,
     scripts: [/[\u0600-\u06FF]/],
@@ -67,7 +67,7 @@ export const LANGUAGES = Object.freeze([
   {
     id: 'hi',
     name: 'हिन्दी',
-    flag: '🇮🇳',
+    flag: 'popup/flags/in.svg',
     shortLabel: 'HI',
     shipped: false,
     scripts: [/[\u0900-\u097F]/],

@@ -1,4 +1,4 @@
-import { formatLanguageLabel } from './lib/format.js';
+import { appendLanguageLabel } from './lib/format.js';
 import { createLanguageOption, moveHighlight, updateHighlight } from './lib/listbox.js';
 
 export function createTargetLanguageUi({
@@ -16,7 +16,12 @@ export function createTargetLanguageUi({
   function setDisplay(languageId) {
     selectedTargetLanguage = languageId;
     const lang = languagesApi.getLanguage(languageId);
-    valueEl.textContent = lang ? formatLanguageLabel(lang) : languageId;
+    if (lang) {
+      appendLanguageLabel(valueEl, lang);
+      return;
+    }
+    valueEl.replaceChildren();
+    valueEl.textContent = languageId;
   }
 
   function setListOpen(open) {
@@ -60,7 +65,7 @@ export function createTargetLanguageUi({
       listEl.appendChild(
         createLanguageOption({
           languageId: lang.id,
-          label: formatLanguageLabel(lang),
+          lang,
           selected: lang.id === selectedTargetLanguage,
           onChoose: choose,
           onHighlight: () => {

@@ -1,5 +1,7 @@
 /** Shared listbox helpers for custom dropdowns. */
 
+import { appendLanguageLabel } from './format.js';
+
 export function updateHighlight(options, highlightIndex) {
   for (let i = 0; i < options.length; i += 1) {
     options[i].setAttribute('aria-selected', i === highlightIndex ? 'true' : 'false');
@@ -9,7 +11,7 @@ export function updateHighlight(options, highlightIndex) {
 
 export function createLanguageOption({
   languageId,
-  label,
+  lang,
   selected = false,
   onChoose,
   onHighlight,
@@ -18,7 +20,7 @@ export function createLanguageOption({
   item.className = 'popup__combobox-option';
   item.setAttribute('role', 'option');
   item.dataset.languageId = languageId;
-  item.textContent = label;
+  appendLanguageLabel(item, lang);
   item.setAttribute('aria-selected', selected ? 'true' : 'false');
   item.addEventListener('mousedown', (event) => {
     event.preventDefault();

@@ -9,7 +9,7 @@
     {
       id: 'en',
       name: 'English',
-      flag: '🇬🇧',
+      flag: 'popup/flags/gb.svg',
       shortLabel: 'EN',
       shipped: true,
       scripts: [/[A-Za-z]/],
@@ -18,7 +18,7 @@
     {
       id: 'ru',
       name: 'Русский',
-      flag: '🇷🇺',
+      flag: 'popup/flags/ru.svg',
       shortLabel: 'RU',
       shipped: true,
       scripts: [/[\u0400-\u04FF]/],
@@ -27,7 +27,7 @@
     {
       id: 'es',
       name: 'Español',
-      flag: '🇪🇸',
+      flag: 'popup/flags/es.svg',
       shortLabel: 'ES',
       shipped: true,
       scripts: [/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/],
@@ -36,7 +36,7 @@
     {
       id: 'fr',
       name: 'Français',
-      flag: '🇫🇷',
+      flag: 'popup/flags/fr.svg',
       shortLabel: 'FR',
       shipped: true,
       scripts: [/[A-Za-zÀÂÄÇÉÈÊËÎÏÔÙÛÜŸÆŒàâäçéèêëîïôùûüÿæœ]/],
@@ -45,7 +45,7 @@
     {
       id: 'de',
       name: 'Deutsch',
-      flag: '🇩🇪',
+      flag: 'popup/flags/de.svg',
       shortLabel: 'DE',
       shipped: true,
       scripts: [/[A-Za-zÄÖÜßäöü]/],
@@ -54,7 +54,7 @@
     {
       id: 'zh',
       name: '中文',
-      flag: '🇨🇳',
+      flag: 'popup/flags/cn.svg',
       shortLabel: 'ZH',
       shipped: true,
       scripts: [/[\u4E00-\u9FFF]/],
@@ -63,7 +63,7 @@
     {
       id: 'ar',
       name: 'العربية',
-      flag: '🇸🇦',
+      flag: 'popup/flags/sa.svg',
       shortLabel: 'AR',
       shipped: false,
       scripts: [/[\u0600-\u06FF]/],
@@ -72,7 +72,7 @@
     {
       id: 'hi',
       name: 'हिन्दी',
-      flag: '🇮🇳',
+      flag: 'popup/flags/in.svg',
       shortLabel: 'HI',
       shipped: false,
       scripts: [/[\u0900-\u097F]/],
