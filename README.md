@@ -15,7 +15,7 @@ Writing in one language while thinking in another? The usual path: type → open
 ## Features
 
 - **In-place translation** — the selection is replaced in the same field
-- **Multiple languages** — English, Russian, Spanish, French, German, Chinese; target language is chosen in settings
+- **Multiple languages** — English, Russian, Spanish, French, German, Portuguese, Chinese, Japanese, Korean, Arabic, Hindi; target language is chosen in settings
 - **Auto-detect source** — the selection language is detected automatically
 - **Circular floating button** — next to the selection; icon shows pair codes (`ES → EN`); quota usage as a progress ring
 - **Tooltip** — `ES → EN` or `ES → EN · 12% used` (exact counts live in settings)
@@ -48,14 +48,19 @@ Remap at: `chrome://extensions/shortcuts` (also linked from Advanced in the popu
 
 ## Languages
 
-| Code | Language | Button label |
-| ---- | -------- | ------------ |
-| en   | English  | `EN`         |
-| ru   | Русский  | `RU`         |
-| es   | Español  | `ES`         |
-| fr   | Français | `FR`         |
-| de   | Deutsch  | `DE`         |
-| zh   | 中文     | `ZH`         |
+| Code | Language  | Button label |
+| ---- | --------- | ------------ |
+| en   | English   | `EN`         |
+| ru   | Русский   | `RU`         |
+| es   | Español   | `ES`         |
+| fr   | Français  | `FR`         |
+| de   | Deutsch   | `DE`         |
+| pt   | Português | `PT`         |
+| zh   | 中文      | `ZH`         |
+| ja   | 日本語    | `JA`         |
+| ko   | 한국어    | `KO`         |
+| ar   | العربية   | `AR`         |
+| hi   | हिन्दी    | `HI`         |
 
 - **Target language** — listbox in settings
 - **Skip languages** — excluded sources in Advanced; chip for language detected on the page, or typeahead in the combobox

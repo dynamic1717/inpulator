@@ -30,7 +30,7 @@ test('uses safe default settings for malformed blocked domains', () => {
 test('normalizes targetLanguage and disabledSourceLanguages', () => {
   const settings = normalizeSettings({
     targetLanguage: 'fr',
-    disabledSourceLanguages: ['ru', 'ru', 'ja', 'zh-CN'],
+    disabledSourceLanguages: ['ru', 'ru', 'th', 'zh-CN'],
   });
 
   assert.equal(settings.targetLanguage, 'fr');
@@ -38,6 +38,6 @@ test('normalizes targetLanguage and disabledSourceLanguages', () => {
 });
 
 test('falls back to english for unknown targetLanguage', () => {
-  const settings = normalizeSettings({ targetLanguage: 'ja' });
+  const settings = normalizeSettings({ targetLanguage: 'th' });
   assert.equal(settings.targetLanguage, 'en');
 });

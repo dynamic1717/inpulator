@@ -24,7 +24,7 @@ The user selects text in an `input` / `textarea` / `contenteditable` — a circu
 
 ## Requirements
 
-- Direction: **any pair** of shipped languages (target in settings, source auto-detected)
+- Direction: **any pair** of registry languages (target in settings, source auto-detected)
 - Button is hidden when `source === target` or source is in `disabledSourceLanguages`
 - Focus on speed and convenience
 - Free translation API (MyMemory) / Google Cloud Translation / Chrome on-device
@@ -97,23 +97,21 @@ replace text (native / editable / clipboard)
 
 Canonical registry: `translation/languages.js` / `languages.js`.
 
-**Shipped (v1):** `en`, `ru`, `es`, `fr`, `de`, `zh`
+**Languages:** `en`, `ru`, `es`, `fr`, `de`, `pt`, `zh`, `ja`, `ko`, `ar`, `hi`
 
-**Stubs (`shipped: false`):** `ar`, `hi` — hidden in UI, ready to enable.
+Each language: `id`, `name`, `flag` (SVG path), `shortLabel` (for the button), `providerCodes` (API code mapping; Chinese Google/MyMemory → `zh-CN`, Chrome → `zh`).
 
-Each language: `id`, `name`, `flag`, `shortLabel` (for the button), `providerCodes` (API code mapping; Chinese Google/MyMemory → `zh-CN`, Chrome → `zh`).
-
-`shortLabel` values are Latin ISO-style codes: `EN`, `RU`, `ES`, `FR`, `DE`, `ZH`.
+`shortLabel` values are Latin ISO-style codes: `EN`, `RU`, `ES`, `FR`, `DE`, `PT`, `ZH`, `JA`, `KO`, `AR`, `HI`.
 
 ### Source language detection
 
-1. `chrome.i18n.detectLanguage` (CLD3) — language with the highest `percentage`
-2. If unreliable / outside the registry — Unicode script and diacritic fallback (`ñ`→es, `äöüß`→de, `àâçé`→fr, otherwise Latin→en)
+1. `chrome.i18n.detectLanguage` (CLD3) — language with the highest `percentage`, rejected if the text does not match the language script (and `zh` is rejected when kana or Hangul is present)
+2. If unreliable / outside the registry — Unicode script and diacritic fallback (`ãõ`→pt, `ñ`→es, `äöüß`→de, `àâçé`→fr, Hangul→ko, kana→ja, otherwise Latin→en)
 
 Button gate (`isTranslatable`):
 
 - text is present;
-- source is shipped;
+- source is in the registry;
 - `source ∉ disabledSourceLanguages`;
 - `source !== targetLanguage`.
 
@@ -160,7 +158,7 @@ Fields:
 
 - Combobox with selected languages as pills inside the field
 - Detected-on-page chip (`+ Language`) when the tab selection language is known and not already skipped
-- Typeahead filters remaining shipped languages
+- Typeahead filters remaining registry languages
 - Content script message: `GET_SELECTION_LANGUAGE`
 
 ## Google API key

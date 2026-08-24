@@ -2,10 +2,13 @@ import { getLanguage, getShippedLanguages, normalizeLanguageId } from './languag
 
 const CYRILLIC_RE = /[\u0400-\u04FF]/;
 const HAN_RE = /[\u4E00-\u9FFF]/;
+const KANA_RE = /[\u3040-\u309F\u30A0-\u30FF]/;
+const HANGUL_RE = /[\uAC00-\uD7AF\u1100-\u11FF]/;
 const ARABIC_RE = /[\u0600-\u06FF]/;
 const DEVANAGARI_RE = /[\u0900-\u097F]/;
 const LATIN_LETTER_RE = /[A-Za-z\u00C0-\u024F]/;
 
+const PT_HINT_RE = /[ÃÕãõ]/;
 const ES_HINT_RE = /[Ññ¿¡]/;
 const DE_HINT_RE = /[ÄÖÜßäöü]/;
 const FR_HINT_RE = /[ÀÂÄÇÉÈÊËÎÏÔÙÛÜŸÆŒàâäçéèêëîïôùûüÿæœ]/;
@@ -20,6 +23,9 @@ function countMatches(text, regex) {
 
 /** CLD3 often labels short Latin words as zh/other; require the expected script. */
 function languageScriptMatches(text, languageId) {
+  if (languageId === 'zh' && (KANA_RE.test(text) || HANGUL_RE.test(text))) {
+    return false;
+  }
   const scripts = getLanguage(languageId)?.scripts;
   if (!Array.isArray(scripts) || scripts.length === 0) return true;
   return scripts.some((re) => re.test(text));
@@ -30,19 +36,26 @@ export function detectSourceLanguageFallback(text) {
   const sample = String(text || '');
   if (!sample.trim()) return null;
 
+  const kanaCount = countMatches(sample, KANA_RE);
+  const hangulCount = countMatches(sample, HANGUL_RE);
   const scores = {
     ru: countMatches(sample, CYRILLIC_RE),
-    zh: countMatches(sample, HAN_RE),
+    zh: kanaCount === 0 && hangulCount === 0 ? countMatches(sample, HAN_RE) : 0,
+    ja: kanaCount,
+    ko: hangulCount,
     ar: countMatches(sample, ARABIC_RE),
     hi: countMatches(sample, DEVANAGARI_RE),
   };
 
   const latinCount = countMatches(sample, LATIN_LETTER_RE);
   if (latinCount > 0) {
+    const ptHints = countMatches(sample, PT_HINT_RE);
     const esHints = countMatches(sample, ES_HINT_RE);
     const deHints = countMatches(sample, DE_HINT_RE);
     const frHints = countMatches(sample, FR_HINT_RE);
-    if (esHints >= deHints && esHints >= frHints && esHints > 0) {
+    if (ptHints > 0 && ptHints >= esHints && ptHints >= deHints && ptHints >= frHints) {
+      scores.pt = latinCount + ptHints * 3;
+    } else if (esHints >= deHints && esHints >= frHints && esHints > 0) {
       scores.es = latinCount + esHints * 3;
     } else if (deHints >= frHints && deHints > 0) {
       scores.de = latinCount + deHints * 3;
