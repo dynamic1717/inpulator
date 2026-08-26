@@ -78,7 +78,7 @@ We do not use this information for advertising, profiling, or resale.
 
 We do not receive your translations. Depending on the provider you choose, text leaves the browser as follows.
 
-**MyMemory (Translated.net)** — default provider. Selected text, language pair, and the generated `de` address are sent to `api.mymemory.translated.net`. Their practices: [Translated.net](https://translated.com/privacy-policy) / [MyMemory](https://mymemory.translated.net/).
+**MyMemory (Translated.net)** — default provider. Selected text, language pair, and the generated `de` address are sent to `api.mymemory.translated.net`. Their practices: [MyMemory](https://mymemory.translated.net/terms-and-conditions).
 
 **Google Cloud Translation** — only if you select Google and save your own API key. Selected text and the key are sent to `translation.googleapis.com`. Google’s practices: [Google Privacy Policy](https://policies.google.com/privacy) and [Cloud Data Processing](https://cloud.google.com/terms/data-processing-addendum). Restrict the key to Cloud Translation API and set quotas. Do not share the key.
 
