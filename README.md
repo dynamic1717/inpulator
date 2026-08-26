@@ -114,6 +114,8 @@ npm run format:check
 
 ## Privacy
 
+Full policy: [PRIVACY.md](./PRIVACY.md).
+
 - **Chrome Translator** — on-device translation; text does not leave the device
 - **Google / MyMemory** — text is sent only if you chose that provider
 - Stored locally: settings, usage counters, MyMemory email, and your Google API key (`chrome.storage.local`)
