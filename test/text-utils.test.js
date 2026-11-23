@@ -23,3 +23,16 @@ test('translateByLines skips whitespace-only input', async () => {
   assert.equal(result, ' \n ');
   assert.equal(called, false);
 });
+
+test('splitIntoChunks cuts unspaced text after punctuation, not mid-phrase', async () => {
+  const { splitIntoChunks } = await import('../translation/text-utils.js');
+  assert.deepEqual(splitIntoChunks('今天天气很好。明天会下雨。', 8), [
+    { text: '今天天气很好。', separator: '' },
+    { text: '明天会下雨。', separator: '' },
+  ]);
+  assert.deepEqual(splitIntoChunks('一二三四五六七八九十', 4), [
+    { text: '一二三四', separator: '' },
+    { text: '五六七八', separator: '' },
+    { text: '九十', separator: '' },
+  ]);
+});

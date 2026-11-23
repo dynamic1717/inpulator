@@ -1,5 +1,6 @@
 /** The floating translate button: language pair icon, quota ring, loading and error states. */
 
+import { t } from '../i18n.js';
 import { getLanguage, getShortLabel } from '../translation/languages.js';
 import buttonCss from './button.css';
 
@@ -126,7 +127,7 @@ export function createFloatingUi({ onTranslate }) {
       host.style.setProperty(property, value, 'important');
     }
 
-    const shadow = host.attachShadow({ mode: 'closed' });
+    const shadow = host.attachShadow({ mode: __E2E__ ? 'open' : 'closed' });
     const style = document.createElement('style');
     style.textContent = buttonCss;
 
@@ -134,7 +135,7 @@ export function createFloatingUi({ onTranslate }) {
     button.id = 'input-translate-btn';
     button.type = 'button';
     button.hidden = true;
-    button.setAttribute('aria-label', 'Translate');
+    button.setAttribute('aria-label', t('buttonTranslate'));
     button.addEventListener('mousedown', (event) => event.preventDefault());
     button.addEventListener('click', onTranslate);
 
@@ -159,9 +160,11 @@ export function createFloatingUi({ onTranslate }) {
     button.innerHTML = `${ring}${buildTranslateIcon(sourceLanguage, targetLanguage)}`;
     button.setAttribute(
       'aria-label',
-      `Translate to ${getLanguage(targetLanguage)?.name || targetLanguage}`
+      t('buttonTranslateTo', getLanguage(targetLanguage)?.name || targetLanguage)
     );
-    button.title = usedPercent ? `${pairLabel} · ${usedPercent} used` : pairLabel;
+    button.title = usedPercent
+      ? t('buttonQuotaUsed', pairLabel, usedPercent)
+      : pairLabel;
   }
 
   return {
@@ -189,11 +192,11 @@ export function createFloatingUi({ onTranslate }) {
         return;
       }
       button.innerHTML = `${buildProgressRing(progress)}${LOADING_ICON}`;
-      button.title = `Downloading language pack… ${Math.round(progress * 100)}%`;
+      button.title = t('buttonDownloadingPack', Math.round(progress * 100));
     },
     setError(message) {
       ensureButton();
-      const text = String(message || 'Translation failed');
+      const text = String(message || t('errorTranslationFailed'));
       button.classList.add('input-translate-btn--error');
       button.innerHTML = ERROR_ICON;
       button.disabled = false;

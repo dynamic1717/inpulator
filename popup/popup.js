@@ -1,3 +1,4 @@
+import { localizeDocument, t } from '../i18n.js';
 import * as languagesApi from '../translation/languages.js';
 import {
   getGoogleApiKey,
@@ -84,7 +85,7 @@ function applySiteToggle(settings) {
   if (!state.hostname) {
     siteToggle.checked = true;
     siteToggle.disabled = true;
-    siteToggleHint.textContent = 'Unavailable for this page';
+    siteToggleHint.textContent = t('popupSiteUnavailable');
     return;
   }
 
@@ -130,6 +131,7 @@ async function resolveCurrentHostname() {
 }
 
 async function init() {
+  localizeDocument();
   targetLanguageUi.populate();
   state.hostname = await resolveCurrentHostname();
   state.selectionSourceLanguage = await resolveSelectionSourceLanguage();

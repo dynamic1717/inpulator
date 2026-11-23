@@ -12,6 +12,16 @@ export function normalizeText(text) {
   return { leadingWhitespace, content, trailingWhitespace };
 }
 
+const PUNCTUATION_RE = /[。！？．、，；：.!?,;:…]/;
+
+/** Index just after the last punctuation mark, or -1. */
+function findLastPunctuation(text) {
+  for (let i = text.length - 1; i >= 0; i -= 1) {
+    if (PUNCTUATION_RE.test(text[i])) return i + 1;
+  }
+  return -1;
+}
+
 // Separators are kept outside API requests so translated chunks never merge words.
 export function splitIntoChunks(text, maxSize) {
   const chunks = [];
@@ -22,8 +32,12 @@ export function splitIntoChunks(text, maxSize) {
     const boundary = candidate.slice(0, maxSize + 1).search(/\s(?=[^\s]*$)/);
 
     if (boundary <= 0) {
-      chunks.push({ text: text.slice(start, start + maxSize), separator: '' });
-      start += maxSize;
+      // No whitespace (Chinese, Japanese…): cut after the last punctuation
+      // mark instead of mid-phrase; hard-cut only when there is none.
+      const punctuation = findLastPunctuation(text.slice(start, start + maxSize));
+      const size = punctuation > 0 ? punctuation : maxSize;
+      chunks.push({ text: text.slice(start, start + size), separator: '' });
+      start += size;
       continue;
     }
 

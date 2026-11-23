@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js';
 import { normalizeText, splitIntoChunks } from '../text-utils.js';
 
 const API_URL = 'https://translation.googleapis.com/language/translate/v2';
@@ -73,9 +74,9 @@ export function createGoogleProvider({
       });
     } catch {
       if (controller.signal.aborted) {
-        throw new Error('Translation request timed out');
+        throw new Error(t('errorTimeout'));
       }
-      throw new Error('Network error');
+      throw new Error(t('errorNetwork'));
     } finally {
       clearTimeout(timeoutId);
     }
@@ -84,13 +85,13 @@ export function createGoogleProvider({
     if (!response.ok) {
       throw new Error(
         data?.error?.message
-          ? `Google Translate error: ${data.error.message}`
-          : `Google Translate API error: ${response.status}`
+          ? t('errorGoogle', data.error.message)
+          : t('errorApiStatus', response.status)
       );
     }
 
     const translated = data?.data?.translations?.[0]?.translatedText;
-    if (!translated) throw new Error('Translation failed');
+    if (!translated) throw new Error(t('errorTranslationFailed'));
     return translated;
   }
 
@@ -102,17 +103,13 @@ export function createGoogleProvider({
       return serialize(async () => {
         const currentApiKey = await getApiKey();
         if (!currentApiKey) {
-          throw new Error(
-            'Google API key not found. Add it in the extension settings.'
-          );
+          throw new Error(t('errorGoogleKeyMissing'));
         }
 
         const { leadingWhitespace, content, trailingWhitespace } = normalizeText(text);
         const quota = await getQuota();
         if (content.length > quota.remaining) {
-          throw new Error(
-            `Not enough quota: ${content.length} characters selected, ${quota.remaining} remaining`
-          );
+          throw new Error(t('errorNotEnoughQuota', content.length, quota.remaining));
         }
 
         const chunks = splitIntoChunks(content, MAX_CHUNK_SIZE);
