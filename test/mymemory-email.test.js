@@ -5,7 +5,7 @@ import {
   MYMEMORY_EMAIL_STORAGE_KEY,
   ensureMyMemoryEmail,
   generateMyMemoryEmail,
-} from '../settings-defaults.js';
+} from '../settings.js';
 
 test('generateMyMemoryEmail returns a stable-looking unique address', () => {
   const first = generateMyMemoryEmail();

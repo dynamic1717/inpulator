@@ -42,3 +42,25 @@ export function splitIntoChunks(text, maxSize) {
   if (start < text.length) chunks.push({ text: text.slice(start), separator: '' });
   return chunks;
 }
+
+/**
+ * Translates each line separately and keeps the original line breaks and
+ * per-line outer whitespace. The Chrome Translator joins lines otherwise.
+ * @param {string} text
+ * @param {(line: string) => Promise<string>} translateLine
+ */
+export async function translateByLines(text, translateLine) {
+  const parts = String(text).split(/(\r?\n)/);
+  let result = '';
+  for (const part of parts) {
+    if (/^\r?\n$/.test(part) || !part.trim()) {
+      result += part;
+      continue;
+    }
+    const leading = part.match(/^\s*/)[0];
+    const trailing = part.match(/\s*$/)[0];
+    const content = part.slice(leading.length, part.length - trailing.length);
+    result += `${leading}${await translateLine(content)}${trailing}`;
+  }
+  return result;
+}

@@ -23,7 +23,7 @@ test('google provider preserves outer whitespace and records monthly usage', asy
     }),
   });
 
-  const result = await provider.translate('  тест  ');
+  const result = await provider.translate('  тест  ', { source: 'ru', target: 'en' });
   assert.equal(result, '  translated  ');
   assert.equal(record.charsUsed, 4);
 
@@ -48,7 +48,10 @@ test('google provider reports a timeout when the request is aborted', async () =
       }),
   });
 
-  await assert.rejects(provider.translate('тест'), /Translation request timed out/);
+  await assert.rejects(
+    provider.translate('тест', { source: 'ru', target: 'en' }),
+    /Translation request timed out/
+  );
 });
 
 test('google provider is unavailable without api key', async () => {
@@ -70,8 +73,9 @@ test('google provider reads a key at request time', async () => {
       get: async () => ({}),
       set: async () => undefined,
     },
-    fetchImpl: async (url) => {
-      assert.match(url.toString(), /key=user-key/);
+    fetchImpl: async (url, { headers }) => {
+      assert.doesNotMatch(url.toString(), /key=/);
+      assert.equal(headers['X-Goog-Api-Key'], 'user-key');
       return {
         ok: true,
         json: async () => ({
@@ -84,5 +88,8 @@ test('google provider reads a key at request time', async () => {
   assert.equal(await provider.isAvailable(), false);
   apiKey = 'user-key';
   assert.equal(await provider.isAvailable(), true);
-  assert.equal(await provider.translate('тест'), 'translated');
+  assert.equal(
+    await provider.translate('тест', { source: 'ru', target: 'en' }),
+    'translated'
+  );
 });

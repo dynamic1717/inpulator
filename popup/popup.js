@@ -1,10 +1,19 @@
+import * as languagesApi from '../translation/languages.js';
+import {
+  getGoogleApiKey,
+  getSettings,
+  isHostBlocked,
+  normalizeDomain,
+  setGoogleApiKey,
+  setSettings,
+  subscribeToSettings,
+} from '../settings.js';
 import { createProviderUi } from './provider.js';
 import { createQuotaUi } from './quota.js';
 import { createSkipLanguagesUi } from './skip-languages.js';
 import { createTargetLanguageUi } from './target-language.js';
 
-const settingsApi = window.InputTranslate.settings;
-const languagesApi = window.InputTranslate.languages;
+const settingsApi = { getSettings, setSettings, getGoogleApiKey, setGoogleApiKey };
 
 const enabledToggle = document.getElementById('enabled-toggle');
 const siteToggle = document.getElementById('site-toggle');
@@ -71,10 +80,6 @@ const skipLanguagesUi = createSkipLanguagesUi({
   onSettingsChange: (next) => applySettingsToUi(next),
 });
 
-function isHostBlocked(host, domains) {
-  return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
-}
-
 function applySiteToggle(settings) {
   if (!state.hostname) {
     siteToggle.checked = true;
@@ -118,7 +123,7 @@ async function resolveCurrentHostname() {
     if (!tab?.url) return null;
     const url = new URL(tab.url);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-    return settingsApi.normalizeDomain(url.hostname) || null;
+    return normalizeDomain(url.hostname) || null;
   } catch {
     return null;
   }
@@ -176,7 +181,7 @@ async function init() {
     if (!targetLanguageUi.contains(event.target)) targetLanguageUi.close();
   });
 
-  settingsApi.subscribe((next) => {
+  subscribeToSettings((next) => {
     applySettingsToUi(next);
     quotaUi.load();
     providerUi.loadChromeModelStatus();

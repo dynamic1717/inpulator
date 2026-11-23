@@ -92,25 +92,26 @@ For Chrome Translator, packs are downloaded **for the needed language pair** (fr
 ### From source
 
 1. Download or clone the repository
-2. Open `chrome://extensions`
-3. Enable **Developer mode**
-4. **Load unpacked** → select the project folder
+2. `npm install && npm run build`
+3. Open `chrome://extensions` and enable **Developer mode**
+4. **Load unpacked** → select the **`dist/`** folder
 5. (Optional) For Google Translate, create a personal [Cloud Translation API](https://cloud.google.com/translate/docs/basic/translating-text) key, restrict it to Translation API and a quota, then add it in settings
 
 ### Update
 
-1. Download the latest repository version
-2. Replace the current project folder with the new one
-3. `chrome://extensions` → reload the extension
-4. Reload open tabs
+1. Pull the latest repository version and run `npm run build`
+2. `chrome://extensions` → reload the extension
+3. Reload open tabs
 
-## Checks
+## Development
 
 ```bash
 npm install
+npm run dev            # rebuild dist/ on change
 npm test
 npm run lint
 npm run format:check
+npm run package        # zip dist/ for the Chrome Web Store
 ```
 
 ## Privacy

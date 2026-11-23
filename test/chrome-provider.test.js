@@ -12,7 +12,7 @@ test('chrome provider translates via sendToOffscreen and preserves whitespace', 
     },
   });
 
-  const result = await provider.translate('  тест  ');
+  const result = await provider.translate('  тест  ', { source: 'ru', target: 'en' });
   assert.equal(result, '  translated  ');
   assert.equal(calls[0].type, 'OFFSCREEN_TRANSLATE');
   assert.equal(calls[0].text, 'тест');
@@ -52,21 +52,21 @@ test('chrome provider isAvailable is true when model is downloadable', async () 
   const provider = createChromeProvider({
     sendToOffscreen: async () => ({ availability: 'downloadable' }),
   });
-  assert.equal(await provider.isAvailable(), true);
+  assert.equal(await provider.isAvailable({ source: 'ru', target: 'en' }), true);
 });
 
 test('chrome provider isAvailable is true while downloading', async () => {
   const provider = createChromeProvider({
     sendToOffscreen: async () => ({ availability: 'downloading' }),
   });
-  assert.equal(await provider.isAvailable(), true);
+  assert.equal(await provider.isAvailable({ source: 'ru', target: 'en' }), true);
 });
 
 test('chrome provider isAvailable is false when unavailable', async () => {
   const provider = createChromeProvider({
     sendToOffscreen: async () => ({ availability: 'unavailable' }),
   });
-  assert.equal(await provider.isAvailable(), false);
+  assert.equal(await provider.isAvailable({ source: 'ru', target: 'en' }), false);
 });
 
 test('chrome provider quota has no limit', async () => {
