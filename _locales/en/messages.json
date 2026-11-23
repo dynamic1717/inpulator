@@ -245,5 +245,36 @@
   "buttonMenuHint": {
     "message": "Right-click to change the language",
     "description": "Second line of the button tooltip"
+  },
+  "errorDeepLKeyMissing": {
+    "message": "DeepL API key not found. Add it in the extension settings."
+  },
+  "errorDeepLPermission": {
+    "message": "Allow access to DeepL: choose DeepL again in the extension popup."
+  },
+  "errorDeepLKeyInvalid": {
+    "message": "DeepL rejected the API key. Check it in the extension settings."
+  },
+  "errorDeepLQuota": {
+    "message": "DeepL character quota for this month is used up"
+  },
+  "errorDeepLTooManyRequests": {
+    "message": "Too many requests to DeepL. Try again in a moment."
+  },
+  "errorDeepL": {
+    "message": "DeepL error: $1",
+    "description": "$1 = message from DeepL"
+  },
+  "popupHintDeepL": {
+    "message": "Sends text to DeepL. Needs your own API key."
+  },
+  "popupDeepLKey": {
+    "message": "DeepL API key"
+  },
+  "popupDeepLKeyPlaceholder": {
+    "message": "Paste your DeepL API key"
+  },
+  "popupDeepLPermissionDenied": {
+    "message": "DeepL needs access to api-free.deepl.com / api.deepl.com to translate."
   }
 }

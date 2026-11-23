@@ -24,6 +24,10 @@
     "https://api.mymemory.translated.net/*",
     "https://translation.googleapis.com/*"
   ],
+  "optional_host_permissions": [
+    "https://api-free.deepl.com/*",
+    "https://api.deepl.com/*"
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"

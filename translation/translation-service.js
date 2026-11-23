@@ -1,8 +1,9 @@
 import { t } from '../i18n.js';
 import { sendToOffscreen } from '../offscreen-manager.js';
-import { ensureMyMemoryEmail, getGoogleApiKey, getSettings } from '../settings.js';
+import { ensureMyMemoryEmail, getApiKey, getSettings } from '../settings.js';
 import { mapLanguageCodes } from './languages.js';
 import { createChromeProvider } from './providers/chrome-provider.js';
+import { createDeepLProvider } from './providers/deepl-provider.js';
 import { createGoogleProvider } from './providers/google-provider.js';
 import { createMyMemoryProvider } from './providers/mymemory-provider.js';
 
@@ -18,9 +19,7 @@ export function createTranslationService({ providers, getSettings } = {}) {
 
   async function resolvePreferredId() {
     const settings = await getSettings();
-    if (settings.provider === PROVIDER_CHROME) return PROVIDER_CHROME;
-    if (settings.provider === PROVIDER_GOOGLE) return PROVIDER_GOOGLE;
-    return PROVIDER_MYMEMORY;
+    return providersById.has(settings.provider) ? settings.provider : PROVIDER_MYMEMORY;
   }
 
   function getProviderOrThrow(id) {
@@ -90,7 +89,8 @@ function getDefaultService() {
     defaultService = createTranslationService({
       providers: [
         createChromeProvider({ sendToOffscreen }),
-        createGoogleProvider({ getApiKey: () => getGoogleApiKey() }),
+        createGoogleProvider({ getApiKey: () => getApiKey('google') }),
+        createDeepLProvider({ getApiKey: () => getApiKey('deepl') }),
         createMyMemoryProvider({ getEmail: () => ensureMyMemoryEmail() }),
       ],
       getSettings: () => getSettings(),

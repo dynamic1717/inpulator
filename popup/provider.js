@@ -4,8 +4,16 @@ import { pairLabel } from './lib/format.js';
 const PROVIDER_HINT_KEYS = {
   chrome: 'popupHintChrome',
   google: 'popupHintGoogle',
+  deepl: 'popupHintDeepL',
   mymemory: 'popupHintMyMemory',
 };
+
+const API_KEY_COPY = {
+  google: { label: 'popupGoogleKey', placeholder: 'popupGoogleKeyPlaceholder' },
+  deepl: { label: 'popupDeepLKey', placeholder: 'popupDeepLKeyPlaceholder' },
+};
+
+const DEEPL_ORIGINS = ['https://api-free.deepl.com/*', 'https://api.deepl.com/*'];
 
 export function createProviderUi({
   segments,
@@ -17,9 +25,10 @@ export function createProviderUi({
   chromeModelBar,
   chromeModelHint,
   chromeModelDownload,
-  googleApiKeyField,
-  googleApiKey,
-  googleApiKeyClear,
+  apiKeyField,
+  apiKeyLabel,
+  apiKeyInput,
+  apiKeyClear,
   languagesApi,
   settingsApi,
   getSettings,
@@ -148,20 +157,25 @@ export function createProviderUi({
     }
   }
 
-  async function loadGoogleApiKeyStatus() {
-    const apiKey = await settingsApi.getGoogleApiKey();
-    googleApiKey.value = '';
-    googleApiKey.placeholder = t(
-      apiKey ? 'popupGoogleKeySaved' : 'popupGoogleKeyPlaceholder'
-    );
-    googleApiKeyClear.hidden = !apiKey;
+  /** Shows the personal API key field for providers that need one. */
+  async function loadApiKeyStatus() {
+    const provider = getSelectedProvider();
+    const copy = API_KEY_COPY[provider];
+    apiKeyField.hidden = !copy;
+    if (!copy) return;
+
+    const apiKey = await settingsApi.getApiKey(provider);
+    apiKeyLabel.textContent = t(copy.label);
+    apiKeyInput.value = '';
+    apiKeyInput.placeholder = t(apiKey ? 'popupGoogleKeySaved' : copy.placeholder);
+    apiKeyClear.hidden = !apiKey;
   }
 
   function apply(settings) {
     setSelectedProvider(settings.provider);
     applyProviderHint(settings.provider);
     chromeModel.hidden = settings.provider !== 'chrome';
-    googleApiKeyField.hidden = settings.provider !== 'google';
+    apiKeyField.hidden = !API_KEY_COPY[settings.provider];
   }
 
   async function selectProvider(provider) {
@@ -169,7 +183,7 @@ export function createProviderUi({
     await onSettingsChange?.(next);
     await onQuotaReload?.();
     await loadChromeModelStatus();
-    if (next.provider === 'google') await loadGoogleApiKeyStatus();
+    await loadApiKeyStatus();
   }
 
   async function downloadPackInPopup(probe) {
@@ -196,21 +210,32 @@ export function createProviderUi({
       segment.addEventListener('click', async () => {
         const provider = segment.dataset.provider;
         if (!provider || provider === getSelectedProvider()) return;
+        // DeepL's hosts are optional permissions. Request them first, while
+        // this click still counts as a user gesture.
+        if (provider === 'deepl') {
+          const granted = await chrome.permissions
+            .request({ origins: DEEPL_ORIGINS })
+            .catch(() => false);
+          if (!granted) {
+            providerHint.textContent = t('popupDeepLPermissionDenied');
+            return;
+          }
+        }
         await selectProvider(provider);
       });
     }
 
-    googleApiKey.addEventListener('change', async () => {
-      const apiKey = googleApiKey.value.trim();
+    apiKeyInput.addEventListener('change', async () => {
+      const apiKey = apiKeyInput.value.trim();
       if (!apiKey) return;
-      await settingsApi.setGoogleApiKey(apiKey);
-      await loadGoogleApiKeyStatus();
+      await settingsApi.setApiKey(getSelectedProvider(), apiKey);
+      await loadApiKeyStatus();
       await onQuotaReload?.();
     });
 
-    googleApiKeyClear.addEventListener('click', async () => {
-      await settingsApi.setGoogleApiKey('');
-      await loadGoogleApiKeyStatus();
+    apiKeyClear.addEventListener('click', async () => {
+      await settingsApi.setApiKey(getSelectedProvider(), '');
+      await loadApiKeyStatus();
       await onQuotaReload?.();
     });
 
@@ -278,6 +303,6 @@ export function createProviderUi({
     bind,
     getSelectedProvider,
     loadChromeModelStatus,
-    loadGoogleApiKeyStatus,
+    loadApiKeyStatus,
   };
 }

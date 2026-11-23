@@ -223,5 +223,35 @@
   },
   "buttonMenuHint": {
     "message": "Правый клик — сменить язык"
+  },
+  "errorDeepLKeyMissing": {
+    "message": "Не найден ключ DeepL API. Добавьте его в настройках расширения."
+  },
+  "errorDeepLPermission": {
+    "message": "Разрешите доступ к DeepL: снова выберите DeepL в окне расширения."
+  },
+  "errorDeepLKeyInvalid": {
+    "message": "DeepL не принял ключ API. Проверьте его в настройках расширения."
+  },
+  "errorDeepLQuota": {
+    "message": "Месячный лимит символов DeepL исчерпан"
+  },
+  "errorDeepLTooManyRequests": {
+    "message": "Слишком много запросов к DeepL. Попробуйте чуть позже."
+  },
+  "errorDeepL": {
+    "message": "Ошибка DeepL: $1"
+  },
+  "popupHintDeepL": {
+    "message": "Отправляет текст в DeepL. Нужен свой ключ API."
+  },
+  "popupDeepLKey": {
+    "message": "Ключ DeepL API"
+  },
+  "popupDeepLKeyPlaceholder": {
+    "message": "Вставьте ключ DeepL API"
+  },
+  "popupDeepLPermissionDenied": {
+    "message": "Для перевода DeepL нужен доступ к api-free.deepl.com / api.deepl.com."
   }
 }
