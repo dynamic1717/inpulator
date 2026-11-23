@@ -241,10 +241,8 @@
     lastHotkeyAt = now;
 
     try {
-      let context = contextTools.detect();
-      if (!(await contextTools.isTranslatable(context, settings))) {
-        context = await InputTranslate.clipboard?.captureSelectionText();
-      }
+      // Only selections inside editable fields are translated in place.
+      const context = contextTools.detect();
       if (await contextTools.isTranslatable(context, settings)) {
         await translateSelection(context);
       }

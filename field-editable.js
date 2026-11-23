@@ -14,7 +14,6 @@
         y: window.innerHeight / 2,
       }),
       replaceEditableSelection: () => false,
-      replaceEditableSelectionWithFallback: async () => false,
     };
     window.__inputTranslateEditable = true;
     return;
@@ -104,6 +103,43 @@
     }
   }
 
+  // Rich editors (ProseMirror, Lexical, Slate, Draft, Quill) read
+  // event.clipboardData in their paste handlers and update their own model.
+  // A synthetic event never touches the system clipboard. Editors that handle
+  // it call preventDefault(); an unhandled event changes nothing.
+  function replaceViaSyntheticPaste(field, newText) {
+    try {
+      const clipboardData = new DataTransfer();
+      clipboardData.setData('text/plain', newText);
+      const event = new ClipboardEvent('paste', {
+        clipboardData,
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      });
+      return !field.dispatchEvent(event);
+    } catch {
+      return false;
+    }
+  }
+
+  // Last resort: edit the DOM directly. May desync editors that keep a model.
+  function replaceViaDomRange(field, range, selection, newText) {
+    try {
+      range.deleteContents();
+      const textNode = document.createTextNode(newText);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } catch {
+      return false;
+    }
+    dispatchInputEvent(field, newText);
+    return true;
+  }
+
   function replaceEditableSelection(context, newText) {
     const { field, meta } = context;
     const range = meta.range.cloneRange();
@@ -115,48 +151,17 @@
     selection.addRange(range);
     field.focus();
 
-    const inserted = document.execCommand('insertText', false, newText);
-
-    if (!inserted) {
-      try {
-        range.deleteContents();
-        const textNode = document.createTextNode(newText);
-        range.insertNode(textNode);
-        range.setStartAfter(textNode);
-        range.collapse(true);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      } catch {
-        return false;
-      }
-      dispatchInputEvent(field, newText);
-    }
-
     // execCommand emits its own input event. Dispatching another one causes
     // duplicate updates in controlled editors.
-    return true;
-  }
-
-  async function replaceEditableSelectionWithFallback(context, newText) {
-    if (replaceEditableSelection(context, newText)) {
-      return true;
-    }
-
-    const clipboard = window.InputTranslate.clipboard;
-    if (!clipboard) return false;
-
-    const replaced = await clipboard.replaceSelection(newText, context.meta.range);
-
-    if (replaced) return true;
-
-    return false;
+    if (document.execCommand('insertText', false, newText)) return true;
+    if (replaceViaSyntheticPaste(field, newText)) return true;
+    return replaceViaDomRange(field, range, selection, newText);
   }
 
   window.InputTranslate.editable = {
     getEditableContext,
     getEditableButtonPosition,
     replaceEditableSelection,
-    replaceEditableSelectionWithFallback,
   };
 
   window.__inputTranslateEditable = true;
