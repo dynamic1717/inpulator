@@ -1,6 +1,7 @@
 /** A "selection context" is the selected text plus where it lives and how to replace it. */
 
 import { t } from '../i18n.js';
+import { getDeepActiveElement } from './editable-dom.js';
 import {
   getEditableButtonPosition,
   getEditableContext,
@@ -13,7 +14,7 @@ import {
 } from './field-native.js';
 
 export function detect() {
-  return getNativeContext(document.activeElement) || getEditableContext() || null;
+  return getNativeContext(getDeepActiveElement()) || getEditableContext() || null;
 }
 
 export function clone(context) {

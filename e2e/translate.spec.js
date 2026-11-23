@@ -193,3 +193,59 @@ test('does not overwrite text that changed during translation', async ({
   await expect(button).toHaveClass(/input-translate-btn--error/);
   await expect(field).toHaveValue('Совсем другой текст');
 });
+
+test.describe('hotkey without a selection', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.route(MYMEMORY, (route) =>
+      route.fulfill({ json: myMemoryReply(route.request().url()) })
+    );
+  });
+
+  /** Sends what the background sends when the Chrome command fires. */
+  async function pressHotkey(serviceWorker) {
+    await serviceWorker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      await chrome.tabs.sendMessage(tab.id, { type: 'TRANSLATE_HOTKEY' });
+    });
+  }
+
+  test('translates the whole input under the caret', async ({
+    openPage,
+    serviceWorker,
+  }) => {
+    const page = await openPage('<textarea id="field">Привет, как дела?</textarea>');
+    const field = page.locator('#field');
+    await field.evaluate((el) => {
+      el.focus();
+      el.setSelectionRange(3, 3);
+    });
+
+    await pressHotkey(serviceWorker);
+    await expect(field).toHaveValue('EN:ПРИВЕТ, КАК ДЕЛА?');
+    await field.press('ControlOrMeta+z');
+    await expect(field).toHaveValue('Привет, как дела?');
+  });
+
+  test('translates only the editable block under the caret', async ({
+    openPage,
+    serviceWorker,
+  }) => {
+    const page = await openPage(`
+      <div contenteditable="true">
+        <div id="first" contenteditable="true">Первый блок</div>
+        <div id="second" contenteditable="true">Второй блок</div>
+      </div>`);
+    await page.locator('#second').evaluate((el) => {
+      el.focus();
+      const range = document.createRange();
+      range.setStart(el.firstChild, 2);
+      range.collapse(true);
+      getSelection().removeAllRanges();
+      getSelection().addRange(range);
+    });
+
+    await pressHotkey(serviceWorker);
+    await expect(page.locator('#second')).toHaveText('EN:ВТОРОЙ БЛОК');
+    await expect(page.locator('#first')).toHaveText('Первый блок');
+  });
+});

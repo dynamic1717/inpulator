@@ -18,6 +18,7 @@ import { isOnDeviceSupportedHere, translateOnDevice } from './on-device.js';
 import * as runtime from './runtime-client.js';
 import * as contextTools from './selection-context.js';
 import { createSelectionObserver } from './selection-observer.js';
+import { hasFocusedFieldText, selectWholeField } from './whole-field.js';
 
 let activeContext = null;
 let renderedContext = null;
@@ -147,7 +148,8 @@ function onMacHotkeyKeydown(event) {
   if (event.code !== 'KeyT' || !event.altKey || !event.shiftKey) return;
   if (event.ctrlKey || event.metaKey || event.repeat) return;
   // Swallow the key only when we are going to act on it.
-  if (!isActive() || !isExtensionEnabled() || !hasSelectedText()) return;
+  if (!isActive() || !isExtensionEnabled()) return;
+  if (!hasSelectedText() && !hasFocusedFieldText()) return;
   event.preventDefault();
   event.stopPropagation();
   onHotkeyTranslate();
@@ -234,8 +236,10 @@ async function onHotkeyTranslate() {
   lastHotkeyAt = now;
 
   try {
-    // Only selections inside editable fields are translated in place.
-    const context = contextTools.detect();
+    // Only text inside editable fields is translated in place. With a caret
+    // but no selection, the whole field is selected and translated.
+    let context = contextTools.detect();
+    if (!context?.text?.trim() && selectWholeField()) context = contextTools.detect();
     if (await isTranslatable(context, settings)) {
       await translateSelection(context);
     }
