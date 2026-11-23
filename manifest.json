@@ -60,7 +60,8 @@
       ],
       "css": ["styles.css"],
       "run_at": "document_idle",
-      "all_frames": true
+      "all_frames": true,
+      "match_origin_as_fallback": true
     }
   ]
 }
