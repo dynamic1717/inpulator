@@ -114,7 +114,7 @@ Every context imports the same modules (`settings.js`, `translation/languages.js
 
 Canonical registry: `translation/languages.js` / `languages.js`.
 
-**Languages:** `en`, `ru`, `es`, `fr`, `de`, `pt`, `zh`, `ja`, `ko`, `ar`, `hi`
+**Languages:** `en`, `ru`, `es`, `fr`, `de`, `pt`, `it`, `nl`, `pl`, `tr`, `uk`, `zh`, `ja`, `ko`, `ar`, `hi`
 
 Each language: `id`, `name`, `flag` (SVG path), `shortLabel` (for the button), `providerCodes` (API code mapping; Chinese Google/MyMemory → `zh-CN`, Chrome → `zh`).
 
@@ -122,8 +122,15 @@ Each language: `id`, `name`, `flag` (SVG path), `shortLabel` (for the button), `
 
 ### Source language detection
 
-1. `chrome.i18n.detectLanguage` (CLD3) — language with the highest `percentage`, rejected if the text does not match the language script (and `zh` is rejected when kana or Hangul is present)
-2. If unreliable / outside the registry — Unicode script and diacritic fallback (`ãõ`→pt, `ñ`→es, `äöüß`→de, `àâçé`→fr, Hangul→ko, kana→ja, otherwise Latin→en)
+`translation/language-detect.js`, best signal first; results are cached per text in `content/language.js`.
+
+1. **Chrome LanguageDetector API** (on-device model, used when its availability is `available`; it is not created while downloadable because selections carry no user gesture). Candidates are taken in confidence order:
+   - a registry language (confidence ≥ 0.1 and matching script) is returned;
+   - a language outside the registry is returned as its bare code (e.g. `sv`) only at confidence ≥ 0.7, so such text is translated as itself rather than mistaken for English;
+   - low-confidence non-registry guesses are skipped (`Да` → `sr 0.38, bg, ru 0.14` → `ru`);
+   - `und` and romanized tags (`hi-Latn`) are ignored; `zh-Hans` maps to `zh`.
+2. **`chrome.i18n.detectLanguage`** (CLD3) — first registry language with a matching script, if reliable or ≥ 40%.
+3. **Heuristic** — Unicode scripts (Cyrillic → `uk` with `іїєґ`, else `ru`; Han, kana, Hangul, Arabic, Devanagari) and Latin diacritics (`ãõ` pt, `ñ¿¡` es, `ąćęłńśźż` pl, `ğış` tr, `äöüß` de, `àâçè…` fr), otherwise `en`.
 
 Button gate (`isTranslatable`):
 
@@ -348,6 +355,18 @@ input-translate-ext/
 └── DOCUMENTATION.md
 ```
 
+## Localization
+
+- `_locales/en` and `_locales/ru`; the browser UI language picks one (`default_locale: "en"`)
+- `i18n.js`: `t(key, …substitutions)` wraps `chrome.i18n.getMessage` and falls back to the English catalog where `chrome.i18n` is missing (unit tests)
+- The popup marks static text with `data-i18n`, `data-i18n-placeholder`, `data-i18n-aria-label`; `localizeDocument()` fills them
+- `test/i18n.test.js` checks that both catalogs have the same keys and `$1…` placeholders
+
+## Testing
+
+- `npm test` — unit tests (`node --test test/*.test.js`)
+- `npm run test:e2e` — builds `dist-e2e/` (`--e2e`: the button's shadow root is open so locators reach it) and runs `e2e/*.spec.js` in Playwright's Chromium with the extension loaded. Test pages are served with `page.route`; MyMemory is faked with `context.route`, which also intercepts the service worker's requests. Chromium has no Translator / LanguageDetector APIs, so on-device paths are covered manually.
+
 ## Development history
 
 ### Phase 1 ✅
@@ -405,6 +424,14 @@ input-translate-ext/
 - Removed `showCharCounter` setting
 - Removed grayscale `*-disabled` action icons (color icons + title when disabled)
 
+### Phase 11 ✅
+
+- Chrome LanguageDetector first in source detection; confident non-registry languages are kept
+- Registry: Italian, Dutch, Polish, Turkish, Ukrainian
+- Unspaced (CJK) text is chunked at punctuation
+- English and Russian UI via `_locales`
+- Playwright e2e suite in CI
+
 ### Phase 10 ✅
 
 - esbuild build into `dist/`; one ES-module source for every context (removed the IIFE copies of languages, settings and detection)
@@ -435,4 +462,4 @@ input-translate-ext/
 - **JavaScript**
 - **Manifest V3**
 - **Google Cloud Translation API** + **MyMemory API** + **Chrome Translator API**
-- **Node test runner**, ESLint, and Prettier for local checks
+- **Node test runner** (unit), **Playwright** (e2e), ESLint, and Prettier

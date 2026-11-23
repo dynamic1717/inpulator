@@ -15,8 +15,9 @@ Writing in one language while thinking in another? The usual path: type → open
 ## Features
 
 - **In-place translation** — the selection is replaced in the same field
-- **Multiple languages** — English, Russian, Spanish, French, German, Portuguese, Chinese, Japanese, Korean, Arabic, Hindi; target language is chosen in settings
-- **Auto-detect source** — the selection language is detected automatically
+- **16 languages** — English, Russian, Ukrainian, Spanish, French, German, Portuguese, Italian, Dutch, Polish, Turkish, Chinese, Japanese, Korean, Arabic, Hindi; target language is chosen in settings
+- **English and Russian UI** — follows the browser language
+- **Auto-detect source** — Chrome's on-device language detector, even for short phrases; text in other languages it is confident about (e.g. Swedish) is translated too
 - **Circular floating button** — next to the selection; icon shows pair codes (`ES → EN`); quota usage as a progress ring
 - **Tooltip** — `ES → EN` or `ES → EN · 12% used` (exact counts live in settings)
 - **Shortcut** — `Alt+Shift+T` (on macOS: `Option+Shift+T`)
@@ -48,19 +49,24 @@ Remap at: `chrome://extensions/shortcuts` (also linked from Advanced in the popu
 
 ## Languages
 
-| Code | Language  | Button label |
-| ---- | --------- | ------------ |
-| en   | English   | `EN`         |
-| ru   | Русский   | `RU`         |
-| es   | Español   | `ES`         |
-| fr   | Français  | `FR`         |
-| de   | Deutsch   | `DE`         |
-| pt   | Português | `PT`         |
-| zh   | 中文      | `ZH`         |
-| ja   | 日本語    | `JA`         |
-| ko   | 한국어    | `KO`         |
-| ar   | العربية   | `AR`         |
-| hi   | हिन्दी    | `HI`         |
+| Code | Language   | Button label |
+| ---- | ---------- | ------------ |
+| en   | English    | `EN`         |
+| ru   | Русский    | `RU`         |
+| es   | Español    | `ES`         |
+| fr   | Français   | `FR`         |
+| de   | Deutsch    | `DE`         |
+| pt   | Português  | `PT`         |
+| zh   | 中文       | `ZH`         |
+| ja   | 日本語     | `JA`         |
+| ko   | 한국어     | `KO`         |
+| ar   | العربية    | `AR`         |
+| hi   | हिन्दी     | `HI`         |
+| it   | Italiano   | `IT`         |
+| nl   | Nederlands | `NL`         |
+| pl   | Polski     | `PL`         |
+| tr   | Türkçe     | `TR`         |
+| uk   | Українська | `UK`         |
 
 - **Target language** — listbox in settings
 - **Skip languages** — excluded sources in Advanced; chip for language detected on the page, or typeahead in the combobox
@@ -110,6 +116,7 @@ npm install
 npm run dev            # rebuild dist/ on change
 npm test
 npm run lint
+npm run test:e2e       # Playwright + Chromium with the extension loaded
 npm run format:check
 npm run package        # zip dist/ for the Chrome Web Store
 ```
