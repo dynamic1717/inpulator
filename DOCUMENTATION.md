@@ -50,7 +50,7 @@ TRANSLATE { text, sourceLanguage }  →  Translation service
   GET_QUOTA / GET_SELECTION_LANGUAGE     → providers (mapped codes)
                              ←    translation + quota
         ↓
-replace text (native / editable / clipboard)
+replace text (native / editable)
 ```
 
 ### Components
@@ -66,7 +66,6 @@ replace text (native / editable / clipboard)
 | `offscreen/`                     | Host for Chrome Translator API                                        |
 | `offscreen-manager.js`           | Offscreen document creation and messaging                             |
 | `shadow-dom.js`                  | Shadow boundary walk, find editable from selection                    |
-| `field-clipboard.js`             | Clipboard fallback for text replacement                               |
 | `field-native.js`                | Logic for `<input>` / `<textarea>`                                    |
 | `field-editable.js`              | Logic for `contenteditable`                                           |
 | `content.js`                     | Button orchestration, events, settings gate                           |
@@ -88,7 +87,6 @@ replace text (native / editable / clipboard)
 | `content_scripts.matches: <all_urls>`                       | Inject content script (not a top-level `permissions` key) |
 | `host_permissions`: `https://api.mymemory.translated.net/*` | MyMemory API                                              |
 | `host_permissions`: `https://translation.googleapis.com/*`  | Google Cloud Translation                                  |
-| `clipboardRead`, `clipboardWrite`                           | Clipboard fallback                                        |
 | `storage`                                                   | Settings, usage counters, Google key, MyMemory email      |
 | `offscreen`                                                 | Chrome Translator API host                                |
 | `activeTab`                                                 | Popup: current tab URL (This site) + selection language   |
@@ -241,13 +239,13 @@ Instead:
 
 - Walk up from the selection node via `parentNode` / `DocumentFragment.host`
 - `selectionchange` to sync button visibility
-- Clipboard fallback (`insertText` → `paste`) for complex editors
+- Replacement chain for rich editors: `insertText` → synthetic `paste` event (`DataTransfer`, the system clipboard is never touched) → direct DOM range edit
 
 ## Content scripts: scope isolation
 
 Module files are wrapped in IIFEs with guard flags (`__inputTranslate*`) — reinjection on extension update does not cause `Identifier already declared`.
 
-Shared API: `window.InputTranslate.{languages, settings, languageDetect, shadow, clipboard, native, editable, selectionContext, selectionObserver, runtimeClient, floatingUi, extension}`.
+Shared API: `window.InputTranslate.{languages, settings, languageDetect, shadow, native, editable, selectionContext, selectionObserver, runtimeClient, floatingUi, extension}`.
 
 Script order in the manifest: `languages.js` → `settings.js` → `language-detect.js` → …
 
@@ -261,6 +259,7 @@ Script order in the manifest: `languages.js` → `settings.js` → `language-det
 - Errors: `setError()` — alert icon + `input-translate-btn--error`; full message in `title` / `aria-label`
 - No toast / snackbar UI — user-visible errors go through the floating button
 - Hotkey: **Alt+Shift+T** (`chrome.commands` → background → content script)
+- The hotkey acts only on selections inside editable fields; page text outside fields is ignored
 - Ctrl+Z works after replace (via `insertText` / native value)
 
 ## Security
@@ -281,7 +280,6 @@ input-translate-ext/
 ├── settings-defaults.js
 ├── language-detect.js
 ├── shadow-dom.js
-├── field-clipboard.js
 ├── field-native.js
 ├── field-editable.js
 ├── floating-ui.js

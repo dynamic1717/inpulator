@@ -1,6 +1,6 @@
 # Privacy Policy — Inpulator
 
-**Effective date:** 26 August 2026
+**Effective date:** 23 November 2026
 
 This policy describes how the Inpulator Chrome extension (“Inpulator”, “the extension”, “we”) handles information. Inpulator is developed by [dynamic1717](https://github.com/dynamic1717). Contact: [disre1717@gmail.com](mailto:disre1717@gmail.com).
 
@@ -47,15 +47,6 @@ Kept in `chrome.storage.local` on your profile, not uploaded to us:
 
 When you open the popup, the extension reads the hostname of the active tab so the “This site” toggle can enable or disable Inpulator on that domain. The hostname is stored only if you add the site to the block list. Other tabs are not queried.
 
-### 2.4 Clipboard (fallback only)
-
-On some editors, replacing or reading the selection needs the clipboard:
-
-- **Read:** if the page selection cannot be read normally, the extension may copy the selection and read that text for translation.
-- **Write:** if the translation cannot be inserted with `insertText`, the extension may write the translated string and paste it over the selection.
-
-Clipboard access is not continuous. It is not used to collect data in the background. The write fallback can overwrite whatever was on the clipboard.
-
 ---
 
 ## 3. How we use information
@@ -92,10 +83,6 @@ Those providers may have their own logs and retention. We do not control them.
 
 Chrome shows these permissions because the extension needs them to work. They are not used to collect extra data.
 
-**clipboardRead** — fallback when the highlighted text cannot be read from the field; used only during a translate action.
-
-**clipboardWrite** — fallback to insert the translation over the selection; used only during a translate action.
-
 **storage** — local settings, usage counters, optional Google API key, generated MyMemory address.
 
 **offscreen** — host for Chrome’s on-device Translator API (service workers cannot run it). No extra window is shown.
@@ -130,7 +117,7 @@ All JavaScript, CSS, and HTML ship in the extension package. The extension does 
 - No sale or sharing of data for advertising
 - No logging of translations on our servers (we do not run a translation server)
 - No reading of password fields
-- No access to the clipboard except the fallback described above
+- No clipboard access: the extension neither reads nor writes the clipboard
 
 ---
 

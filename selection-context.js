@@ -44,7 +44,7 @@
 
     return Boolean(
       context.meta?.range &&
-      (context.type === 'clipboard' || context.field?.isConnected) &&
+      context.field?.isConnected &&
       context.meta.range.toString() === (context.meta.rangeText ?? context.text)
     );
   }
@@ -103,21 +103,11 @@
       return;
     }
 
-    if (context.type === 'editable') {
-      const replaced =
-        await window.InputTranslate.editable.replaceEditableSelectionWithFallback(
-          context,
-          text
-        );
-      if (replaced) return;
-    }
-
-    if (context.type === 'clipboard') {
-      const replaced = await window.InputTranslate.clipboard?.replaceSelection(
-        text,
-        context.meta?.range
-      );
-      if (replaced) return;
+    if (
+      context.type === 'editable' &&
+      window.InputTranslate.editable.replaceEditableSelection(context, text)
+    ) {
+      return;
     }
 
     throw new Error('Could not replace the text');

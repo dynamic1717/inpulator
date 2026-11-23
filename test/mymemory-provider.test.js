@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   createMyMemoryProvider,
+  pickMyMemoryTranslation,
   splitIntoChunks,
 } from '../translation/providers/mymemory-provider.js';
 
@@ -82,4 +83,36 @@ test('provider passes email as de query param when provided', async () => {
 
   await provider.translate('тест');
   assert.match(requestedUrl, /de=inpulator-test%40example\.com/);
+});
+
+test('pickMyMemoryTranslation keeps clean translations as is', () => {
+  const data = { responseData: { translatedText: 'Hello, world' }, matches: [] };
+  assert.equal(pickMyMemoryTranslation(data, 'Привет, мир'), 'Hello, world');
+});
+
+test('pickMyMemoryTranslation prefers the machine match over tagged memory', () => {
+  const data = {
+    responseData: { translatedText: '<p>Meeting moved</p>' },
+    matches: [
+      { translation: '<p>Meeting moved</p>', 'created-by': 'Public_Corpora' },
+      { translation: 'The meeting was moved', 'created-by': 'MT!' },
+    ],
+  };
+  assert.equal(
+    pickMyMemoryTranslation(data, 'Встречу перенесли'),
+    'The meeting was moved'
+  );
+});
+
+test('pickMyMemoryTranslation strips markup when no clean match exists', () => {
+  const data = {
+    responseData: { translatedText: '<p>Tom &amp; Jerry&#39;s &lt;3</p>' },
+    matches: [],
+  };
+  assert.equal(pickMyMemoryTranslation(data, 'Том и Джерри'), "Tom & Jerry's <3");
+});
+
+test('pickMyMemoryTranslation keeps markup that exists in the source', () => {
+  const data = { responseData: { translatedText: '<b>Hello</b>' }, matches: [] };
+  assert.equal(pickMyMemoryTranslation(data, '<b>Привет</b>'), '<b>Hello</b>');
 });

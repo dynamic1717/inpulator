@@ -13,6 +13,45 @@ function todayKey() {
 
 export { splitIntoChunks } from '../text-utils.js';
 
+const TAG_RE = /<\/?[a-z][^>]*>/i;
+const ENTITY_RE = /&(?:#\d+|#x[0-9a-f]+|[a-z]+);/i;
+const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+function hasMarkup(text) {
+  return TAG_RE.test(text) || ENTITY_RE.test(text);
+}
+
+function stripMarkup(text) {
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(
+      /&([a-z]+);/gi,
+      (entity, name) => NAMED_ENTITIES[name.toLowerCase()] ?? entity
+    );
+}
+
+/**
+ * MyMemory may answer from its translation memory, whose entries sometimes
+ * carry HTML tags or entities. When the source has no markup, prefer the
+ * machine translation of this exact query (created-by "MT!") and otherwise
+ * strip the markup.
+ */
+export function pickMyMemoryTranslation(data, sourceText) {
+  const primary = data.responseData.translatedText;
+  if (hasMarkup(sourceText) || !hasMarkup(primary)) return primary;
+
+  const machine = (data.matches || []).find(
+    (match) =>
+      match?.['created-by'] === 'MT!' &&
+      typeof match.translation === 'string' &&
+      match.translation.trim() &&
+      !hasMarkup(match.translation)
+  );
+  return machine ? machine.translation : stripMarkup(primary);
+}
+
 export function createMyMemoryProvider({
   storage,
   fetchImpl = fetch,
@@ -88,7 +127,7 @@ export function createMyMemoryProvider({
           : 'Translation failed'
       );
     }
-    return data.responseData.translatedText;
+    return pickMyMemoryTranslation(data, text);
   }
 
   return {
