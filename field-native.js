@@ -123,9 +123,24 @@
     };
   }
 
+  // execCommand('insertText') keeps the browser's native undo stack (Ctrl+Z)
+  // and fires a trusted input event that React/Vue controlled inputs accept.
+  function replaceViaInsertText(field, start, end, newText) {
+    field.focus();
+    field.setSelectionRange(start, end);
+    try {
+      return document.execCommand('insertText', false, newText);
+    } catch {
+      return false;
+    }
+  }
+
   function replaceNativeSelection(context, newText) {
     const { field, meta } = context;
     const { start, end } = meta;
+
+    if (replaceViaInsertText(field, start, end, newText)) return;
+
     const value = field.value;
 
     const nextValue = value.slice(0, start) + newText + value.slice(end);
