@@ -134,3 +134,84 @@ test('canTranslateSource respects target and disabled list', () => {
     false
   );
 });
+
+// Results below were captured from Chrome's LanguageDetector for these phrases.
+const model = (pairs) => async () =>
+  pairs.map(([detectedLanguage, confidence]) => ({ detectedLanguage, confidence }));
+
+test('model: short spanish phrase is spanish, not english', async () => {
+  const detected = await detectSourceLanguage('comprobación de texto', {
+    detectWithModel: model([
+      ['es', 0.97],
+      ['gl', 0.03],
+    ]),
+  });
+  assert.equal(detected, 'es');
+});
+
+test('model: skips unshipped low-confidence guesses for a short russian word', async () => {
+  const detected = await detectSourceLanguage('Да', {
+    detectWithModel: model([
+      ['sr', 0.38],
+      ['bg', 0.16],
+      ['ru', 0.14],
+    ]),
+  });
+  assert.equal(detected, 'ru');
+});
+
+test('model: keeps a confident language outside the registry', async () => {
+  const detected = await detectSourceLanguage('tack så mycket', {
+    detectWithModel: model([
+      ['sv', 0.97],
+      ['da', 0.01],
+    ]),
+  });
+  assert.equal(detected, 'sv');
+});
+
+test('model: maps script subtags and ignores romanized variants', async () => {
+  assert.equal(
+    await detectSourceLanguage('谢谢', { detectWithModel: model([['zh-Hans', 0.97]]) }),
+    'zh'
+  );
+  assert.equal(
+    await detectSourceLanguage('ok', {
+      detectWithModel: model([
+        ['hi-Latn', 0.5],
+        ['en', 0.38],
+      ]),
+    }),
+    'en'
+  );
+});
+
+test('model: ukrainian is no longer folded into russian', async () => {
+  const detected = await detectSourceLanguage('дякую', {
+    detectWithModel: model([
+      ['uk', 0.45],
+      ['ru', 0.33],
+    ]),
+  });
+  assert.equal(detected, 'uk');
+});
+
+test('model: falls back to CLD when the model has nothing usable', async () => {
+  const detected = await detectSourceLanguage('Guten Morgen', {
+    detectWithModel: model([['und', 1]]),
+    detectLanguage: async () => ({
+      isReliable: true,
+      languages: [{ language: 'de', percentage: 90 }],
+    }),
+  });
+  assert.equal(detected, 'de');
+});
+
+test('fallback detects ukrainian letters', () => {
+  assert.equal(detectSourceLanguageFallback('Привіт, як справи?'), 'uk');
+});
+
+test('fallback detects polish and turkish diacritics', () => {
+  assert.equal(detectSourceLanguageFallback('Dzień dobry, proszę'), 'pl');
+  assert.equal(detectSourceLanguageFallback('Teşekkür ederim, nasılsın?'), 'tr');
+});

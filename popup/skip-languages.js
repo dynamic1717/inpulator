@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { appendLanguageLabel } from './lib/format.js';
 import { createLanguageOption, moveHighlight, updateHighlight } from './lib/listbox.js';
 
@@ -95,7 +96,7 @@ export function createSkipLanguagesUi({
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.className = 'popup__pill-remove';
-      remove.setAttribute('aria-label', `Enable ${lang.name}`);
+      remove.setAttribute('aria-label', t('popupEnableLanguage', lang.name));
       remove.textContent = '×';
       remove.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -119,7 +120,7 @@ export function createSkipLanguagesUi({
     if (!canSuggest) return;
 
     appendLanguageLabel(suggestText, lang);
-    suggestChip.setAttribute('aria-label', `Skip ${lang.name}`);
+    suggestChip.setAttribute('aria-label', t('popupSkipLanguage', lang.name));
   }
 
   function renderList(settings) {

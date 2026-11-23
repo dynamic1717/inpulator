@@ -1,0 +1,280 @@
+{
+  "extName": {
+    "message": "Inpulator",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Translate selected text in input fields to your chosen language.",
+    "description": "Store description"
+  },
+  "actionTitle": {
+    "message": "Inpulator — Translate text",
+    "description": "Toolbar button tooltip"
+  },
+  "actionTitleDisabled": {
+    "message": "Inpulator — disabled",
+    "description": "Toolbar tooltip when disabled"
+  },
+  "commandTranslate": {
+    "message": "Translate the selected text to the chosen language",
+    "description": "Keyboard shortcut description"
+  },
+  "buttonTranslate": {
+    "message": "Translate",
+    "description": "Button aria-label before languages are known"
+  },
+  "buttonTranslateTo": {
+    "message": "Translate to $1",
+    "description": "$1 = target language name"
+  },
+  "buttonQuotaUsed": {
+    "message": "$1 · $2 used",
+    "description": "$1 = language pair, $2 = percent"
+  },
+  "buttonDownloadingPack": {
+    "message": "Downloading language pack… $1%",
+    "description": "$1 = percent"
+  },
+  "errorTranslationFailed": {
+    "message": "Translation failed"
+  },
+  "errorLanguageNotDetected": {
+    "message": "Could not detect the text language"
+  },
+  "errorSelectionChanged": {
+    "message": "The selection changed; select the text again"
+  },
+  "errorReplaceFailed": {
+    "message": "Could not replace the text"
+  },
+  "errorTimeout": {
+    "message": "Translation request timed out"
+  },
+  "errorNetwork": {
+    "message": "Network error"
+  },
+  "errorApiStatus": {
+    "message": "Translation service error: $1",
+    "description": "$1 = HTTP status"
+  },
+  "errorGoogle": {
+    "message": "Google Translate error: $1",
+    "description": "$1 = message from Google"
+  },
+  "errorMyMemory": {
+    "message": "MyMemory error: $1",
+    "description": "$1 = message from MyMemory"
+  },
+  "errorMyMemoryDailyLimit": {
+    "message": "Daily translation limit reached"
+  },
+  "errorNotEnoughQuota": {
+    "message": "Not enough quota: $1 characters selected, $2 remaining"
+  },
+  "errorGoogleKeyMissing": {
+    "message": "Google API key not found. Add it in the extension settings."
+  },
+  "errorProviderUnavailable": {
+    "message": "Provider $1 is unavailable"
+  },
+  "errorChromeUnavailable": {
+    "message": "Chrome Translator is unavailable. Download the $1 pack or choose another provider.",
+    "description": "$1 = language pair"
+  },
+  "errorTranslatorApiMissing": {
+    "message": "Chrome Translator API is unavailable. Requires Chrome 138+ (desktop)."
+  },
+  "errorPackUnavailable": {
+    "message": "The Chrome language pack for $1 can't be downloaded: this pair is not supported.",
+    "description": "$1 = language pair"
+  },
+  "errorPackNotReady": {
+    "message": "The $1 language pack is not ready on this site yet. Click the translate button once (the shortcut can't start a download) or use \"Download packs\" in the extension popup.",
+    "description": "$1 = language pair"
+  },
+  "errorAvailabilityCheck": {
+    "message": "Could not check availability"
+  },
+  "errorChromeTranslation": {
+    "message": "Chrome translation failed"
+  },
+  "errorQuotaRead": {
+    "message": "Cannot read quota"
+  },
+  "errorModelStatus": {
+    "message": "Cannot get model status"
+  },
+  "errorModelDownload": {
+    "message": "Cannot download model"
+  },
+  "popupQuotaUsed": {
+    "message": "Used"
+  },
+  "popupQuotaUsedToday": {
+    "message": "Used today"
+  },
+  "popupQuotaUsedMonth": {
+    "message": "Used this month"
+  },
+  "popupQuotaLimit": {
+    "message": "Limit"
+  },
+  "popupQuotaNoLimit": {
+    "message": "No limit"
+  },
+  "popupQuotaResetDay": {
+    "message": "Local estimate. Resets at 00:00 UTC."
+  },
+  "popupQuotaResetMonth": {
+    "message": "Local estimate. Resets on the 1st of the month (UTC)."
+  },
+  "popupTranslateButton": {
+    "message": "Translate button"
+  },
+  "popupTranslateButtonHint": {
+    "message": "Show it near selected text, everywhere."
+  },
+  "popupThisSite": {
+    "message": "This site"
+  },
+  "popupSiteUnavailable": {
+    "message": "Unavailable for this page"
+  },
+  "popupTranslateTo": {
+    "message": "Translate to"
+  },
+  "popupProvider": {
+    "message": "Provider"
+  },
+  "popupProviderOnDevice": {
+    "message": "On-device",
+    "description": "Chrome Translator provider name"
+  },
+  "popupHintChrome": {
+    "message": "On-device, no API key or quota. Private and offline after packs download."
+  },
+  "popupHintGoogle": {
+    "message": "Sends text to Google. Needs your own API key."
+  },
+  "popupHintMyMemory": {
+    "message": "Up to 50,000 characters/day. Text is sent to MyMemory."
+  },
+  "popupPacks": {
+    "message": "Packs $1",
+    "description": "$1 = language pair"
+  },
+  "popupPacksLabel": {
+    "message": "Language packs"
+  },
+  "popupPacksDownload": {
+    "message": "Download packs"
+  },
+  "popupPacksDownloading": {
+    "message": "Downloading language packs…"
+  },
+  "popupPacksNotDownloaded": {
+    "message": "Not downloaded"
+  },
+  "popupPacksRequired": {
+    "message": "Required for on-device translation $1",
+    "description": "$1 = language pair"
+  },
+  "popupPacksUnavailable": {
+    "message": "Unavailable"
+  },
+  "popupPacksPairUnsupported": {
+    "message": "Pair $1 is not supported"
+  },
+  "popupPacksNoApi": {
+    "message": "No API"
+  },
+  "popupPacksNeedsChrome": {
+    "message": "Needs Chrome 138+ (desktop) with Translator API"
+  },
+  "popupPacksFailed": {
+    "message": "Failed to download packs"
+  },
+  "popupGoogleKey": {
+    "message": "Google API key"
+  },
+  "popupGoogleKeyPlaceholder": {
+    "message": "Paste your Google API key"
+  },
+  "popupGoogleKeySaved": {
+    "message": "Key saved"
+  },
+  "popupGoogleKeyRemove": {
+    "message": "Remove API key"
+  },
+  "popupAdvanced": {
+    "message": "Advanced"
+  },
+  "popupAdvancedHint": {
+    "message": "Skip languages or change the shortcut."
+  },
+  "popupSkipLanguages": {
+    "message": "Skip languages"
+  },
+  "popupSkipLanguagesHint": {
+    "message": "The button won't appear when selected text is in these languages."
+  },
+  "popupSkipDetected": {
+    "message": "Detected in this input:"
+  },
+  "popupSkipAdd": {
+    "message": "Add a language..."
+  },
+  "popupSkipSearchHint": {
+    "message": "Type to search or pick from the suggestion above."
+  },
+  "popupSkipLanguage": {
+    "message": "Skip $1",
+    "description": "$1 = language name"
+  },
+  "popupEnableLanguage": {
+    "message": "Enable $1",
+    "description": "$1 = language name"
+  },
+  "popupChangeShortcut": {
+    "message": "Change shortcut"
+  },
+  "menuTranslateTo": {
+    "message": "Translate to",
+    "description": "Header of the right-click language menu"
+  },
+  "buttonMenuHint": {
+    "message": "Right-click to change the language",
+    "description": "Second line of the button tooltip"
+  },
+  "errorDeepLKeyMissing": {
+    "message": "DeepL API key not found. Add it in the extension settings."
+  },
+  "errorDeepLPermission": {
+    "message": "Allow access to DeepL: choose DeepL again in the extension popup."
+  },
+  "errorDeepLKeyInvalid": {
+    "message": "DeepL rejected the API key. Check it in the extension settings."
+  },
+  "errorDeepLQuota": {
+    "message": "DeepL character quota for this month is used up"
+  },
+  "errorDeepLTooManyRequests": {
+    "message": "Too many requests to DeepL. Try again in a moment."
+  },
+  "errorDeepL": {
+    "message": "DeepL error: $1",
+    "description": "$1 = message from DeepL"
+  },
+  "popupHintDeepL": {
+    "message": "Sends text to DeepL. Needs your own API key."
+  },
+  "popupDeepLKey": {
+    "message": "DeepL API key"
+  },
+  "popupDeepLKeyPlaceholder": {
+    "message": "Paste your DeepL API key"
+  },
+  "popupDeepLPermissionDenied": {
+    "message": "DeepL needs access to api-free.deepl.com / api.deepl.com to translate."
+  }
+}

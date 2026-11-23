@@ -1,10 +1,20 @@
+import { localizeDocument, t } from '../i18n.js';
+import * as languagesApi from '../translation/languages.js';
+import {
+  getApiKey,
+  getSettings,
+  isHostBlocked,
+  normalizeDomain,
+  setApiKey,
+  setSettings,
+  subscribeToSettings,
+} from '../settings.js';
 import { createProviderUi } from './provider.js';
 import { createQuotaUi } from './quota.js';
 import { createSkipLanguagesUi } from './skip-languages.js';
 import { createTargetLanguageUi } from './target-language.js';
 
-const settingsApi = window.InputTranslate.settings;
-const languagesApi = window.InputTranslate.languages;
+const settingsApi = { getSettings, setSettings, getApiKey, setApiKey };
 
 const enabledToggle = document.getElementById('enabled-toggle');
 const siteToggle = document.getElementById('site-toggle');
@@ -33,9 +43,10 @@ const providerUi = createProviderUi({
   chromeModelBar: document.getElementById('chrome-model-bar'),
   chromeModelHint: document.getElementById('chrome-model-hint'),
   chromeModelDownload: document.getElementById('chrome-model-download'),
-  googleApiKeyField: document.getElementById('google-api-key-field'),
-  googleApiKey: document.getElementById('google-api-key'),
-  googleApiKeyClear: document.getElementById('google-api-key-clear'),
+  apiKeyField: document.getElementById('api-key-field'),
+  apiKeyLabel: document.getElementById('api-key-label'),
+  apiKeyInput: document.getElementById('api-key'),
+  apiKeyClear: document.getElementById('api-key-clear'),
   languagesApi,
   settingsApi,
   getSettings: () => state.settings,
@@ -71,15 +82,11 @@ const skipLanguagesUi = createSkipLanguagesUi({
   onSettingsChange: (next) => applySettingsToUi(next),
 });
 
-function isHostBlocked(host, domains) {
-  return domains.some((domain) => host === domain || host.endsWith(`.${domain}`));
-}
-
 function applySiteToggle(settings) {
   if (!state.hostname) {
     siteToggle.checked = true;
     siteToggle.disabled = true;
-    siteToggleHint.textContent = 'Unavailable for this page';
+    siteToggleHint.textContent = t('popupSiteUnavailable');
     return;
   }
 
@@ -118,19 +125,20 @@ async function resolveCurrentHostname() {
     if (!tab?.url) return null;
     const url = new URL(tab.url);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-    return settingsApi.normalizeDomain(url.hostname) || null;
+    return normalizeDomain(url.hostname) || null;
   } catch {
     return null;
   }
 }
 
 async function init() {
+  localizeDocument();
   targetLanguageUi.populate();
   state.hostname = await resolveCurrentHostname();
   state.selectionSourceLanguage = await resolveSelectionSourceLanguage();
   const settings = await settingsApi.getSettings();
   applySettingsToUi(settings);
-  await providerUi.loadGoogleApiKeyStatus();
+  await providerUi.loadApiKeyStatus();
   await quotaUi.load();
   await providerUi.loadChromeModelStatus();
 
@@ -176,7 +184,7 @@ async function init() {
     if (!targetLanguageUi.contains(event.target)) targetLanguageUi.close();
   });
 
-  settingsApi.subscribe((next) => {
+  subscribeToSettings((next) => {
     applySettingsToUi(next);
     quotaUi.load();
     providerUi.loadChromeModelStatus();

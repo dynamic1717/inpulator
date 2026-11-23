@@ -3,7 +3,7 @@
 export function getFlagUrl(lang) {
   const path = lang?.flag;
   if (!path) return null;
-  return new URL(`../../${path}`, import.meta.url).href;
+  return chrome.runtime.getURL(path);
 }
 
 export function appendLanguageLabel(el, lang) {
@@ -28,7 +28,9 @@ export function appendLanguageLabel(el, lang) {
 
 export function formatCount(value) {
   if (value == null) return '…';
-  return Number(value).toLocaleString('en-US');
+  return Number(value).toLocaleString(
+    globalThis.chrome?.i18n?.getUILanguage?.() || 'en-US'
+  );
 }
 
 export function pairLabel(languagesApi, sourceCode, targetCode) {

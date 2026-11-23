@@ -32,54 +32,72 @@ The user selects text in an `input` / `textarea` / `contenteditable` — a circu
 ## Architecture
 
 ```
-Content Script                    Background (Service Worker)
-──────────────────────────────    ─────────────────────────────
-mouseup / keyup / selectionchange
+Content script (content/, bundled to dist/content.js)   Background service worker
+─────────────────────────────────────────────────────   ─────────────────────────
+mouseup / keyup / selectionchange (debounced 100 ms)
         ↓
-detectSelectionContext()
-  ├── field-native.js
-  └── field-editable.js (+ shadow-dom.js)
+selection-context.detect()
+  ├── field-native.js     (<input>, <textarea>)
+  └── field-editable.js   (contenteditable, via editable-dom.js)
         ↓
-language-detect.js (CLD + fallback)
+language.js → translation/language-detect.js (CLD + fallback, cached per text)
         ↓
-gate: enabled, site, source≠target, not disabled
+gate: enabled, site, source≠target, not skipped
         ↓
-floating button UI (pair on icon + quota ring)
+floating-ui.js (closed shadow root: pair icon + quota ring)
         ↓
-TRANSLATE { text, sourceLanguage }  →  Translation service
-  GET_QUOTA / GET_SELECTION_LANGUAGE     → providers (mapped codes)
-                             ←    translation + quota
+TRANSLATE { text, sourceLanguage }  ───────────────→   translation-service.js
+GET_QUOTA / GET_TRANSLATE_SHORTCUT                      → providers (mapped codes)
+                                    ←───────────────   translation + quota
         ↓
-replace text (native / editable / clipboard)
+replace text (native / editable)
 ```
+
+### Build
+
+Source files are ES modules. `scripts/build.mjs` (esbuild) writes the loadable extension to `dist/`:
+
+| Entry                    | Output                        | Format                                  |
+| ------------------------ | ----------------------------- | --------------------------------------- |
+| `content/index.js`       | `dist/content.js`             | IIFE (content scripts can't be ESM)     |
+| `background.js`          | `dist/background.js`          | ESM (`"type": "module"` service worker) |
+| `popup/popup.js`         | `dist/popup/popup.js`         | ESM                                     |
+| `offscreen/offscreen.js` | `dist/offscreen/offscreen.js` | ESM                                     |
+
+`content/button.css` is inlined into the content bundle as text and injected into the button's shadow root. The manifest, HTML, popup CSS, fonts, flags and icons are copied as-is.
+
+| Command           | Purpose                                           |
+| ----------------- | ------------------------------------------------- |
+| `npm run build`   | One-off build into `dist/`                        |
+| `npm run dev`     | Rebuild on change                                 |
+| `npm run package` | Build and zip `dist/` → `inpulator-<version>.zip` |
+
+Every context imports the same modules (`settings.js`, `translation/languages.js`, `translation/language-detect.js`), so there are no per-context copies to keep in sync.
 
 ### Components
 
-| File                             | Purpose                                                               |
-| -------------------------------- | --------------------------------------------------------------------- |
-| `manifest.json`                  | Manifest V3 (English strings), permissions, content scripts, commands |
-| `languages.js`                   | IIFE: language registry, shortLabel, mapLanguageCodes                 |
-| `settings.js`                    | IIFE: read/write `extensionSettings`                                  |
-| `settings-defaults.js`           | ES module settings constants for background                           |
-| `language-detect.js`             | IIFE: `chrome.i18n.detectLanguage` + script fallback                  |
-| `popup/`                         | Modular English settings UI (see structure below)                     |
-| `offscreen/`                     | Host for Chrome Translator API                                        |
-| `offscreen-manager.js`           | Offscreen document creation and messaging                             |
-| `shadow-dom.js`                  | Shadow boundary walk, find editable from selection                    |
-| `field-clipboard.js`             | Clipboard fallback for text replacement                               |
-| `field-native.js`                | Logic for `<input>` / `<textarea>`                                    |
-| `field-editable.js`              | Logic for `contenteditable`                                           |
-| `content.js`                     | Button orchestration, events, settings gate                           |
-| `selection-context.js`           | Selection context, position, text replacement                         |
-| `selection-observer.js`          | Selection and viewport event batching                                 |
-| `runtime-client.js`              | Quota cache and messaging with background                             |
-| `floating-ui.js`                 | Circular button, pair SVG, quota ring, `setError`                     |
-| `background.js`                  | Message relay, hotkey, action title, Chrome model status              |
-| `translation/languages.js`       | ES module language registry                                           |
-| `translation/language-detect.js` | ES module detection (tests / shared logic)                            |
-| `translation/`                   | Contract, text-utils, Google/MyMemory/Chrome, service                 |
-| `styles.css`                     | Floating button styles (ring, loading, error)                         |
-| `icons/icon{16,48,128}.png`      | Action / store icons                                                  |
+| File                            | Purpose                                                               |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `manifest.json`                 | Manifest V3 (English strings), permissions, content scripts, commands |
+| `settings.js`                   | Settings schema, normalization, `chrome.storage` helpers              |
+| `background.js`                 | Message handlers, hotkey, action title                                |
+| `offscreen-manager.js`          | Offscreen document creation and messaging                             |
+| `offscreen/`                    | Host for the Chrome Translator API (status per language pair)         |
+| `content/index.js`              | Button orchestration, events, settings gate                           |
+| `content/selection-context.js`  | Selection context, anchor position, text replacement                  |
+| `content/field-native.js`       | `<input>` / `<textarea>`                                              |
+| `content/field-editable.js`     | `contenteditable` and its replacement chain                           |
+| `content/editable-dom.js`       | Find the editable root from a selection, across shadow boundaries     |
+| `content/selection-observer.js` | Debounced selection and viewport events                               |
+| `content/language.js`           | Cached source-language detection and the translate gate               |
+| `content/runtime-client.js`     | Quota cache and messaging with the background                         |
+| `content/floating-ui.js`        | Circular button in a closed shadow root, pair SVG, quota ring         |
+| `content/button.css`            | Button styles (ring, loading, error)                                  |
+| `content/extension-context.js`  | Detects an invalidated extension context after a reload               |
+| `translation/`                  | Language registry, detection, providers, translation service          |
+| `popup/`                        | Settings UI (see structure below)                                     |
+| `scripts/build.mjs`             | esbuild build / watch / package                                       |
+| `icons/icon{16,48,128}.png`     | Action / store icons                                                  |
 
 ### Permissions
 
@@ -88,7 +106,6 @@ replace text (native / editable / clipboard)
 | `content_scripts.matches: <all_urls>`                       | Inject content script (not a top-level `permissions` key) |
 | `host_permissions`: `https://api.mymemory.translated.net/*` | MyMemory API                                              |
 | `host_permissions`: `https://translation.googleapis.com/*`  | Google Cloud Translation                                  |
-| `clipboardRead`, `clipboardWrite`                           | Clipboard fallback                                        |
 | `storage`                                                   | Settings, usage counters, Google key, MyMemory email      |
 | `offscreen`                                                 | Chrome Translator API host                                |
 | `activeTab`                                                 | Popup: current tab URL (This site) + selection language   |
@@ -97,7 +114,7 @@ replace text (native / editable / clipboard)
 
 Canonical registry: `translation/languages.js` / `languages.js`.
 
-**Languages:** `en`, `ru`, `es`, `fr`, `de`, `pt`, `zh`, `ja`, `ko`, `ar`, `hi`
+**Languages:** `en`, `ru`, `es`, `fr`, `de`, `pt`, `it`, `nl`, `pl`, `tr`, `uk`, `zh`, `ja`, `ko`, `ar`, `hi`
 
 Each language: `id`, `name`, `flag` (SVG path), `shortLabel` (for the button), `providerCodes` (API code mapping; Chinese Google/MyMemory → `zh-CN`, Chrome → `zh`).
 
@@ -105,8 +122,15 @@ Each language: `id`, `name`, `flag` (SVG path), `shortLabel` (for the button), `
 
 ### Source language detection
 
-1. `chrome.i18n.detectLanguage` (CLD3) — language with the highest `percentage`, rejected if the text does not match the language script (and `zh` is rejected when kana or Hangul is present)
-2. If unreliable / outside the registry — Unicode script and diacritic fallback (`ãõ`→pt, `ñ`→es, `äöüß`→de, `àâçé`→fr, Hangul→ko, kana→ja, otherwise Latin→en)
+`translation/language-detect.js`, best signal first; results are cached per text in `content/language.js`.
+
+1. **Chrome LanguageDetector API** (on-device model, used when its availability is `available`; it is not created while downloadable because selections carry no user gesture). Candidates are taken in confidence order:
+   - a registry language (confidence ≥ 0.1 and matching script) is returned;
+   - a language outside the registry is returned as its bare code (e.g. `sv`) only at confidence ≥ 0.7, so such text is translated as itself rather than mistaken for English;
+   - low-confidence non-registry guesses are skipped (`Да` → `sr 0.38, bg, ru 0.14` → `ru`);
+   - `und` and romanized tags (`hi-Latn`) are ignored; `zh-Hans` maps to `zh`.
+2. **`chrome.i18n.detectLanguage`** (CLD3) — first registry language with a matching script, if reliable or ≥ 40%.
+3. **Heuristic** — Unicode scripts (Cyrillic → `uk` with `іїєґ`, else `ru`; Han, kana, Hangul, Arabic, Devanagari) and Latin diacritics (`ãõ` pt, `ñ¿¡` es, `ąćęłńśźż` pl, `ğış` tr, `äöüß` de, `àâçè…` fr), otherwise `en`.
 
 Button gate (`isTranslatable`):
 
@@ -132,12 +156,13 @@ Key in `chrome.storage.local`:
 Separate storage keys (not inside `extensionSettings`):
 
 - `googleTranslateApiKey` — personal Google Cloud Translation key
+- `deeplApiKey` — personal DeepL API key
 - `myMemoryEmail` — auto-generated on install for MyMemory
 
 Fields:
 
 - **enabled** — global on/off; gates floating UI and translate. `chrome.action.setTitle` becomes `Inpulator — disabled` when off
-- **provider** — `mymemory` (default), `chrome`, or `google`
+- **provider** — `mymemory` (default), `chrome`, `google`, or `deepl`
 - **blockedDomains** — domains where translate UI is hidden (“This site” toggle)
 - **targetLanguage** — canonical target language id
 - **disabledSourceLanguages** — canonical source ids for which the button is hidden
@@ -174,7 +199,12 @@ Language pair: `{ source, target }` after `mapLanguageCodes(providerId, pair)`.
 
 ### Chrome Translator API
 
-On-device via an offscreen document (`offscreen/offscreen.js`). The service worker calls `Translator` only through messaging.
+Runs on-device. Two hosts:
+
+1. **Content script** (`content/on-device.js`), used first. The button click is a user gesture, which `Translator.create()` requires whenever a pair is `downloadable` / `downloading`, so missing packs download right there with progress on the button.
+2. **Offscreen document** (`offscreen/offscreen.js`), the fallback when there is no gesture (the `chrome.commands` hotkey) or the page's permissions policy blocks the API (e.g. cross-origin iframes). It can't start downloads.
+
+Availability is reported **per origin**: a pack already on disk still reads as `downloadable` for a site that hasn't used it, so each site needs one click (or one popup "Download packs" for the extension origin).
 
 | Parameter | Value                                           |
 | --------- | ----------------------------------------------- |
@@ -183,9 +213,9 @@ On-device via an offscreen document (`offscreen/offscreen.js`). The service work
 | Quota     | No local limit (`period: 'none'`)               |
 | Requires  | Chrome 138+ desktop; `offscreen` permission     |
 
-- Status/download in popup: pair = selection language (if any) → `targetLanguage`; fallback `ru→en` or `en→target`
-- `isAvailable` is true for `available` / `downloadable` / `downloading` — packs download on demand via `Translator.create`
-- Translator instances cached in offscreen by `source|target`
+- Text is translated line by line (the API joins lines otherwise)
+- Translator instances are cached by `source|target`; a failing cached instance is recreated and the call retried once
+- Popup status/download pair: selection language (if any) → `targetLanguage`; fallback `ru→en` or `en→target`. "Download packs" calls `Translator.create()` in the popup, which has the click's gesture
 
 ### Google Cloud Translation
 
@@ -206,6 +236,19 @@ On-device via an offscreen document (`offscreen/offscreen.js`). The service work
 | Max chunk    | 450 characters                                          |
 | Quota        | Local 50,000 / day (`dailyUsage`)                       |
 | Email (`de`) | Auto-generated on install and stored in `myMemoryEmail` |
+
+### DeepL
+
+| Parameter | Value                                                                                                      |
+| --------- | ---------------------------------------------------------------------------------------------------------- |
+| Endpoint  | `POST /v2/translate` on `api-free.deepl.com` (keys ending `:fx`) or `api.deepl.com`                        |
+| Auth      | `Authorization: DeepL-Auth-Key <key>`                                                                      |
+| Codes     | Source: bare upper-case (`RU`); target variants where DeepL requires them (`EN-US`, `PT-BR`, `ZH-HANS`)    |
+| Chunk     | ~20,000 characters per request (DeepL caps a request at 128 KiB)                                           |
+| Quota     | `GET /v2/usage` (`character_count` / `character_limit`), cached 60 s; local estimate when it can't be read |
+
+- The API hosts are `optional_host_permissions`; the popup requests them when DeepL is selected (the click is the user gesture). Without them translation reports how to grant access.
+- Errors: 403 → invalid key, 456 → monthly quota used up, 429 → too many requests.
 
 ### Provider selection
 
@@ -241,15 +284,12 @@ Instead:
 
 - Walk up from the selection node via `parentNode` / `DocumentFragment.host`
 - `selectionchange` to sync button visibility
-- Clipboard fallback (`insertText` → `paste`) for complex editors
+- Replacement chain for rich editors: `insertText` → synthetic `paste` event (`DataTransfer`, the system clipboard is never touched) → direct DOM range edit
 
-## Content scripts: scope isolation
+## Content script isolation
 
-Module files are wrapped in IIFEs with guard flags (`__inputTranslate*`) — reinjection on extension update does not cause `Identifier already declared`.
-
-Shared API: `window.InputTranslate.{languages, settings, languageDetect, shadow, clipboard, native, editable, selectionContext, selectionObserver, runtimeClient, floatingUi, extension}`.
-
-Script order in the manifest: `languages.js` → `settings.js` → `language-detect.js` → …
+- The content script is a single IIFE bundle with no globals besides a start-once flag.
+- The floating button lives in a closed shadow root under an `<inpulator-root>` host, so page CSS cannot restyle it and its CSS never leaks into the page.
 
 ## UX details
 
@@ -260,7 +300,9 @@ Script order in the manifest: `languages.js` → `settings.js` → `language-det
 - Loading: spinner; button disabled
 - Errors: `setError()` — alert icon + `input-translate-btn--error`; full message in `title` / `aria-label`
 - No toast / snackbar UI — user-visible errors go through the floating button
-- Hotkey: **Alt+Shift+T** (`chrome.commands` → background → content script)
+- Hotkey: **Alt+Shift+T** (`chrome.commands` → background → content script); with only a caret, the whole field is selected first (`content/whole-field.js`: nearest element with an explicit `contenteditable`, so a Notion block rather than the page)
+- Right-click on the button: target-language menu inside the shadow root (excludes the source language; keeps the page selection)
+- The hotkey acts only on selections inside editable fields; page text outside fields is ignored
 - Ctrl+Z works after replace (via `insertText` / native value)
 
 ## Security
@@ -276,30 +318,20 @@ Script order in the manifest: `languages.js` → `settings.js` → `language-det
 input-translate-ext/
 ├── manifest.json
 ├── background.js
-├── languages.js
-├── settings.js
-├── settings-defaults.js
-├── language-detect.js
-├── shadow-dom.js
-├── field-clipboard.js
-├── field-native.js
-├── field-editable.js
-├── floating-ui.js
-├── selection-context.js
-├── selection-observer.js
-├── runtime-client.js
-├── content.js
-├── styles.css
-├── icons/
-│   ├── icon16.png
-│   ├── icon48.png
-│   └── icon128.png
-├── images/
-│   └── banner.jpg
-├── offscreen/
-│   ├── offscreen.html
-│   └── offscreen.js
 ├── offscreen-manager.js
+├── settings.js
+├── content/
+│   ├── index.js
+│   ├── selection-context.js
+│   ├── field-native.js
+│   ├── field-editable.js
+│   ├── editable-dom.js
+│   ├── selection-observer.js
+│   ├── language.js
+│   ├── runtime-client.js
+│   ├── floating-ui.js
+│   ├── button.css
+│   └── extension-context.js
 ├── translation/
 │   ├── languages.js
 │   ├── language-detect.js
@@ -316,6 +348,7 @@ input-translate-ext/
 │   ├── popup.css
 │   ├── fonts.css
 │   ├── fonts/                 # Manrope + JetBrains Mono woff2
+│   ├── flags/
 │   ├── provider.js
 │   ├── skip-languages.js
 │   ├── target-language.js
@@ -323,10 +356,31 @@ input-translate-ext/
 │   └── lib/
 │       ├── format.js
 │       └── listbox.js
+├── offscreen/
+│   ├── offscreen.html
+│   └── offscreen.js
+├── icons/
+├── images/
+│   └── banner.jpg
+├── scripts/
+│   └── build.mjs
 ├── test/
+├── dist/                      # build output (git-ignored)
 ├── README.md
 └── DOCUMENTATION.md
 ```
+
+## Localization
+
+- `_locales/en` and `_locales/ru`; the browser UI language picks one (`default_locale: "en"`)
+- `i18n.js`: `t(key, …substitutions)` wraps `chrome.i18n.getMessage` and falls back to the English catalog where `chrome.i18n` is missing (unit tests)
+- The popup marks static text with `data-i18n`, `data-i18n-placeholder`, `data-i18n-aria-label`; `localizeDocument()` fills them
+- `test/i18n.test.js` checks that both catalogs have the same keys and `$1…` placeholders
+
+## Testing
+
+- `npm test` — unit tests (`node --test test/*.test.js`)
+- `npm run test:e2e` — builds `dist-e2e/` (`--e2e`: the button's shadow root is open so locators reach it) and runs `e2e/*.spec.js` in Playwright's Chromium with the extension loaded. Test pages are served with `page.route`; MyMemory is faked with `context.route`, which also intercepts the service worker's requests. Chromium has no Translator / LanguageDetector APIs, so on-device paths are covered manually.
 
 ## Development history
 
@@ -385,6 +439,29 @@ input-translate-ext/
 - Removed `showCharCounter` setting
 - Removed grayscale `*-disabled` action icons (color icons + title when disabled)
 
+### Phase 12 ✅
+
+- Hotkey without a selection translates the whole field (the block under the caret in block editors)
+- Right-click on the button opens a target-language menu
+- DeepL provider (optional host permissions, usage from `/v2/usage`)
+
+### Phase 11 ✅
+
+- Chrome LanguageDetector first in source detection; confident non-registry languages are kept
+- Registry: Italian, Dutch, Polish, Turkish, Ukrainian
+- Unspaced (CJK) text is chunked at punctuation
+- English and Russian UI via `_locales`
+- Playwright e2e suite in CI
+
+### Phase 10 ✅
+
+- esbuild build into `dist/`; one ES-module source for every context (removed the IIFE copies of languages, settings and detection)
+- Floating button moved into a closed shadow root
+- Language detection cached per text; selection events debounced
+- Offscreen Translator status tracked per language pair; popup polling removed
+- Google API key sent in the `X-Goog-Api-Key` header
+- `npm run package` for Chrome Web Store archives; `minimum_chrome_version: 116`
+
 ### Phase 9 ✅
 
 - Popup split into modules (`provider.js`, `skip-languages.js`, `target-language.js`, `quota.js`, `lib/*`, `fonts.css`)
@@ -396,13 +473,14 @@ input-translate-ext/
 
 1. Clone the repository
 2. `npm install`
-3. `chrome://extensions` → Developer mode
-4. “Load unpacked” → project folder
-5. After each code change — reload the extension + **F5 on tabs**
+3. `npm run dev` (or `npm run build` once)
+4. `chrome://extensions` → Developer mode
+5. “Load unpacked” → the **`dist/`** folder
+6. After each rebuild — reload the extension + **F5 on tabs**
 
 ## Stack
 
 - **JavaScript**
 - **Manifest V3**
 - **Google Cloud Translation API** + **MyMemory API** + **Chrome Translator API**
-- **Node test runner**, ESLint, and Prettier for local checks
+- **Node test runner** (unit), **Playwright** (e2e), ESLint, and Prettier

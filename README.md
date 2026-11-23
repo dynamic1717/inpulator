@@ -15,13 +15,14 @@ Writing in one language while thinking in another? The usual path: type → open
 ## Features
 
 - **In-place translation** — the selection is replaced in the same field
-- **Multiple languages** — English, Russian, Spanish, French, German, Portuguese, Chinese, Japanese, Korean, Arabic, Hindi; target language is chosen in settings
-- **Auto-detect source** — the selection language is detected automatically
+- **16 languages** — English, Russian, Ukrainian, Spanish, French, German, Portuguese, Italian, Dutch, Polish, Turkish, Chinese, Japanese, Korean, Arabic, Hindi; target language is chosen in settings
+- **English and Russian UI** — follows the browser language
+- **Auto-detect source** — Chrome's on-device language detector, even for short phrases; text in other languages it is confident about (e.g. Swedish) is translated too
 - **Circular floating button** — next to the selection; icon shows pair codes (`ES → EN`); quota usage as a progress ring
 - **Tooltip** — `ES → EN` or `ES → EN · 12% used` (exact counts live in settings)
 - **Shortcut** — `Alt+Shift+T` (on macOS: `Option+Shift+T`)
-- **Three providers** — MyMemory by default, Chrome Translator (on-device), Google Translate
-- **Settings** — segmented provider control, target language, Advanced (skip-languages combobox + change shortcut), Chrome packs, Google API key, on/off, per-site toggle
+- **Four providers** — MyMemory by default, Chrome Translator (on-device), Google Translate, DeepL
+- **Settings** — segmented provider control, target language, Advanced (skip-languages combobox + change shortcut), Chrome packs, Google / DeepL API key, on/off, per-site toggle
 - **Wide field support** — `<input>`, `<textarea>`, `contenteditable` (Gmail, ChatGPT, Slack, etc.), including Shadow DOM
 - **Clear states** — spinner while loading; alert icon on the button when something fails (no toast)
 
@@ -31,11 +32,17 @@ Writing in one language while thinking in another? The usual path: type → open
 2. Type into any supported field
 3. Select the fragment to translate
 4. Press the translate button **or** the shortcut
+
+More:
+
+- **No selection** — press the shortcut with the caret in a field to translate the whole field (in block editors like Notion, the block under the caret)
+- **Right-click the button** — pick another target language on the spot
+
 5. The selection is replaced with the translation
 
 The button appears when the selection language differs from the target and is not excluded. It disappears when the selection is cleared.
 
-Open settings from the extension icon: target language, site toggle, provider (MyMemory / On-device / Google), Chrome packs or Google API key, and Advanced for skip languages / shortcut.
+Open settings from the extension icon: target language, site toggle, provider (MyMemory / On-device / Google / DeepL), Chrome packs or the API key, and Advanced for skip languages / shortcut.
 
 ## Shortcut
 
@@ -48,19 +55,24 @@ Remap at: `chrome://extensions/shortcuts` (also linked from Advanced in the popu
 
 ## Languages
 
-| Code | Language  | Button label |
-| ---- | --------- | ------------ |
-| en   | English   | `EN`         |
-| ru   | Русский   | `RU`         |
-| es   | Español   | `ES`         |
-| fr   | Français  | `FR`         |
-| de   | Deutsch   | `DE`         |
-| pt   | Português | `PT`         |
-| zh   | 中文      | `ZH`         |
-| ja   | 日本語    | `JA`         |
-| ko   | 한국어    | `KO`         |
-| ar   | العربية   | `AR`         |
-| hi   | हिन्दी    | `HI`         |
+| Code | Language   | Button label |
+| ---- | ---------- | ------------ |
+| en   | English    | `EN`         |
+| ru   | Русский    | `RU`         |
+| es   | Español    | `ES`         |
+| fr   | Français   | `FR`         |
+| de   | Deutsch    | `DE`         |
+| pt   | Português  | `PT`         |
+| zh   | 中文       | `ZH`         |
+| ja   | 日本語     | `JA`         |
+| ko   | 한국어     | `KO`         |
+| ar   | العربية    | `AR`         |
+| hi   | हिन्दी     | `HI`         |
+| it   | Italiano   | `IT`         |
+| nl   | Nederlands | `NL`         |
+| pl   | Polski     | `PL`         |
+| tr   | Türkçe     | `TR`         |
+| uk   | Українська | `UK`         |
 
 - **Target language** — listbox in settings
 - **Skip languages** — excluded sources in Advanced; chip for language detected on the page, or typeahead in the combobox
@@ -68,11 +80,12 @@ Remap at: `chrome://extensions/shortcuts` (also linked from Advanced in the popu
 
 ## Providers and limits
 
-| Provider          | Limit (local)       | Notes                                                          |
-| ----------------- | ------------------- | -------------------------------------------------------------- |
-| MyMemory          | **50,000 / day**    | Default; cloud service, text is sent to MyMemory               |
-| Chrome Translator | **No limit**        | On-device, Chrome 138+ desktop; no progress ring on the button |
-| Google Translate  | **500,000 / month** | Requires your own API key in settings; text is sent to Google  |
+| Provider          | Limit (local)       | Notes                                                           |
+| ----------------- | ------------------- | --------------------------------------------------------------- |
+| MyMemory          | **50,000 / day**    | Default; cloud service, text is sent to MyMemory                |
+| Chrome Translator | **No limit**        | On-device, Chrome 138+ desktop; no progress ring on the button  |
+| Google Translate  | **500,000 / month** | Requires your own API key in settings; text is sent to Google   |
+| DeepL             | **Your plan**       | Your own API key (Free: 500,000 / month); usage read from DeepL |
 
 Google/MyMemory counters are stored locally and are an **estimate**, not exact API billing.
 
@@ -84,6 +97,7 @@ For Chrome Translator, packs are downloaded **for the needed language pair** (fr
 - The button does not appear when source equals target, or the source is excluded
 - Does not work in **cross-origin iframes**
 - Rich text inserts plain text — formatting is lost
+- Only text inside editable fields is translated; selecting regular page text does nothing
 - After updating the extension, **reload the tab** (F5)
 
 ## Install
@@ -91,25 +105,27 @@ For Chrome Translator, packs are downloaded **for the needed language pair** (fr
 ### From source
 
 1. Download or clone the repository
-2. Open `chrome://extensions`
-3. Enable **Developer mode**
-4. **Load unpacked** → select the project folder
+2. `npm install && npm run build`
+3. Open `chrome://extensions` and enable **Developer mode**
+4. **Load unpacked** → select the **`dist/`** folder
 5. (Optional) For Google Translate, create a personal [Cloud Translation API](https://cloud.google.com/translate/docs/basic/translating-text) key, restrict it to Translation API and a quota, then add it in settings
 
 ### Update
 
-1. Download the latest repository version
-2. Replace the current project folder with the new one
-3. `chrome://extensions` → reload the extension
-4. Reload open tabs
+1. Pull the latest repository version and run `npm run build`
+2. `chrome://extensions` → reload the extension
+3. Reload open tabs
 
-## Checks
+## Development
 
 ```bash
 npm install
+npm run dev            # rebuild dist/ on change
 npm test
 npm run lint
+npm run test:e2e       # Playwright + Chromium with the extension loaded
 npm run format:check
+npm run package        # zip dist/ for the Chrome Web Store
 ```
 
 ## Privacy

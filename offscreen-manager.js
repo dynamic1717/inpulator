@@ -20,7 +20,8 @@ export async function ensureOffscreenDocument() {
   creating = chrome.offscreen.createDocument({
     url: OFFSCREEN_PATH,
     reasons: ['DOM_SCRAPING'],
-    justification: 'Run on-device Chrome Translator API for RU→EN translation',
+    justification:
+      'Run the on-device Chrome Translator API, which is not available in service workers',
   });
 
   try {

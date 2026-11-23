@@ -1,17 +1,15 @@
-/** Offscreen document host for Chrome Translator API (on-device). */
+/** Offscreen document host for the on-device Chrome Translator API. */
+
+import { t } from '../i18n.js';
+import { translateByLines } from '../translation/text-utils.js';
+
+/** @typedef {{ availability: string|null, downloading: boolean, progress: number, error: string|null }} ModelStatus */
 
 const translators = new Map();
-
-/** @type {{ availability: string|null, downloading: boolean, progress: number, error: string|null }} */
-let modelStatus = {
-  availability: null,
-  downloading: false,
-  progress: 0,
-  error: null,
-};
-
-/** True while Translator.create() is in flight — prevents polls from clearing download UI. */
-let installInProgress = false;
+/** @type {Map<string, ModelStatus>} status per language pair */
+const statuses = new Map();
+/** Pairs whose Translator.create() is in flight; polls must not reset their progress. */
+const installing = new Set();
 
 function pairKey(source, target) {
   return `${source}|${target}`;
@@ -21,228 +19,200 @@ function pairLabel(source, target) {
   return `${String(source).toUpperCase()}→${String(target).toUpperCase()}`;
 }
 
-function packUnavailableMessage(sourceLanguage, targetLanguage) {
-  return `Could not download the Chrome language pack for ${pairLabel(sourceLanguage, targetLanguage)}. Download is unavailable for this pair.`;
+function packUnavailableMessage(source, target) {
+  return t('errorPackUnavailable', pairLabel(source, target));
 }
 
-function isGenericTranslatorFailure(error) {
-  const raw = String(error?.message || error || '').toLowerCase();
-  return (
-    error?.name === 'UnknownError' ||
-    error?.name === 'NotSupportedError' ||
-    raw.includes('generic failure') ||
-    raw.includes('not supported') ||
-    raw.includes('unavailable')
-  );
-}
-
-function formatTranslatorInstallError(error, sourceLanguage, targetLanguage) {
-  const raw = String(error?.message || error || '');
-  if (isGenericTranslatorFailure(error)) {
-    return packUnavailableMessage(sourceLanguage, targetLanguage);
-  }
-  return raw || packUnavailableMessage(sourceLanguage, targetLanguage);
+function packNotDownloadedMessage(source, target) {
+  return t('errorPackNotReady', pairLabel(source, target));
 }
 
 function assertTranslatorApi() {
   if (!('Translator' in globalThis)) {
-    throw new Error(
-      'Chrome Translator API is unavailable. Requires Chrome 138+ (desktop).'
-    );
+    throw new Error(t('errorTranslatorApiMissing'));
   }
 }
 
-function snapshotStatus() {
-  return {
-    availability: modelStatus.availability,
-    downloading: modelStatus.downloading,
-    progress: modelStatus.progress,
-    error: modelStatus.error,
-  };
+function getStatus(source, target) {
+  const key = pairKey(source, target);
+  if (!statuses.has(key)) {
+    statuses.set(key, {
+      availability: null,
+      downloading: false,
+      progress: 0,
+      error: null,
+    });
+  }
+  return statuses.get(key);
 }
 
-function broadcastStatus() {
+function updateStatus(source, target, patch) {
+  const status = Object.assign(getStatus(source, target), patch);
   chrome.runtime
-    .sendMessage({ type: 'CHROME_MODEL_STATUS', status: snapshotStatus() })
+    .sendMessage({
+      type: 'CHROME_MODEL_STATUS',
+      sourceLanguage: source,
+      targetLanguage: target,
+      status: { ...status },
+    })
     .catch(() => undefined);
+  return { ...status };
 }
 
-async function refreshAvailability(sourceLanguage, targetLanguage) {
+async function refreshAvailability(source, target) {
   try {
     assertTranslatorApi();
     const availability = await globalThis.Translator.availability({
-      sourceLanguage,
-      targetLanguage,
+      sourceLanguage: source,
+      targetLanguage: target,
     });
-    modelStatus.availability = availability;
-    modelStatus.error = null;
-
-    if (installInProgress) {
-      // Keep in-flight download progress; only refresh availability label.
-    } else if (availability === 'available') {
-      modelStatus.downloading = false;
-      modelStatus.progress = 1;
-    } else if (availability === 'downloading') {
-      modelStatus.downloading = true;
-    } else if (availability === 'downloadable' && !modelStatus.downloading) {
-      modelStatus.progress = 0;
+    if (installing.has(pairKey(source, target))) {
+      return updateStatus(source, target, { availability, error: null });
     }
+    return updateStatus(source, target, {
+      availability,
+      error: null,
+      downloading: availability === 'downloading',
+      progress: availability === 'available' ? 1 : getStatus(source, target).progress,
+    });
   } catch (error) {
-    installInProgress = false;
-    modelStatus = {
+    return updateStatus(source, target, {
       availability: 'unsupported',
       downloading: false,
       progress: 0,
-      error: error.message || 'Could not check availability',
-    };
+      error: error.message || t('errorAvailabilityCheck'),
+    });
   }
-  broadcastStatus();
-  return snapshotStatus();
 }
 
-async function getTranslator(sourceLanguage, targetLanguage) {
+async function getTranslator(source, target) {
   assertTranslatorApi();
-  const key = pairKey(sourceLanguage, targetLanguage);
+  const key = pairKey(source, target);
   if (translators.has(key)) return translators.get(key);
 
   const availability = await globalThis.Translator.availability({
-    sourceLanguage,
-    targetLanguage,
+    sourceLanguage: source,
+    targetLanguage: target,
   });
   if (availability === 'unavailable') {
-    throw new Error(packUnavailableMessage(sourceLanguage, targetLanguage));
+    updateStatus(source, target, {
+      availability,
+      error: packUnavailableMessage(source, target),
+    });
+    throw new Error(packUnavailableMessage(source, target));
   }
 
   const needsDownload =
     availability === 'downloadable' || availability === 'downloading';
-
-  installInProgress = true;
-  modelStatus.availability = availability;
-  if (needsDownload) {
-    modelStatus.downloading = true;
-    modelStatus.progress = 0;
-    broadcastStatus();
-  }
+  installing.add(key);
+  updateStatus(source, target, {
+    availability,
+    downloading: needsDownload,
+    progress: needsDownload ? 0 : getStatus(source, target).progress,
+  });
 
   try {
     const translator = await globalThis.Translator.create({
-      sourceLanguage,
-      targetLanguage,
-      monitor(m) {
-        m.addEventListener('downloadprogress', (event) => {
-          const loaded = Math.min(1, Math.max(0, Number(event.loaded) || 0));
-          modelStatus.progress = loaded;
-          modelStatus.downloading = true;
-          broadcastStatus();
+      sourceLanguage: source,
+      targetLanguage: target,
+      monitor(monitor) {
+        monitor.addEventListener('downloadprogress', (event) => {
+          updateStatus(source, target, {
+            downloading: true,
+            progress: Math.min(1, Math.max(0, Number(event.loaded) || 0)),
+          });
         });
       },
     });
     translators.set(key, translator);
-    installInProgress = false;
-    modelStatus = {
+    updateStatus(source, target, {
       availability: 'available',
       downloading: false,
       progress: 1,
       error: null,
-    };
-    broadcastStatus();
+    });
     return translator;
   } catch (error) {
-    installInProgress = false;
-    modelStatus.downloading = false;
+    const latest = await globalThis.Translator.availability({
+      sourceLanguage: source,
+      targetLanguage: target,
+    }).catch(() => availability);
 
-    let availability = modelStatus.availability;
-    try {
-      availability = await globalThis.Translator.availability({
-        sourceLanguage,
-        targetLanguage,
-      });
-      modelStatus.availability = availability;
-    } catch {
-      // Keep previous availability if the follow-up check fails.
+    // Only "unavailable" means the pair can't be installed. Any other create()
+    // failure while a download is needed is the missing user gesture: this
+    // offscreen document never has one (Chrome may report it as a generic
+    // failure rather than NotAllowedError).
+    let message;
+    if (latest === 'unavailable') {
+      message = packUnavailableMessage(source, target);
+    } else if (needsDownload || latest === 'downloadable' || latest === 'downloading') {
+      message = packNotDownloadedMessage(source, target);
+    } else {
+      message = error?.message || t('errorChromeTranslation');
     }
 
-    const message =
-      availability === 'unavailable'
-        ? packUnavailableMessage(sourceLanguage, targetLanguage)
-        : formatTranslatorInstallError(error, sourceLanguage, targetLanguage);
-    modelStatus.error = message;
-    if (availability === 'unavailable' || isGenericTranslatorFailure(error)) {
-      modelStatus.availability = 'unavailable';
-    }
-    broadcastStatus();
+    updateStatus(source, target, {
+      availability: latest,
+      downloading: false,
+      error: message,
+    });
     throw new Error(message);
+  } finally {
+    installing.delete(key);
   }
 }
 
-async function ensureModel(sourceLanguage, targetLanguage) {
-  await refreshAvailability(sourceLanguage, targetLanguage);
-  if (
-    modelStatus.availability === 'unavailable' ||
-    modelStatus.availability === 'unsupported'
-  ) {
-    if (modelStatus.availability === 'unavailable' && !modelStatus.error) {
-      modelStatus.error = packUnavailableMessage(sourceLanguage, targetLanguage);
-      broadcastStatus();
-    }
-    return snapshotStatus();
+async function ensureModel(source, target) {
+  const status = await refreshAvailability(source, target);
+  if (status.availability === 'unavailable' || status.availability === 'unsupported') {
+    return status.error
+      ? status
+      : updateStatus(source, target, { error: packUnavailableMessage(source, target) });
   }
-  if (
-    modelStatus.availability === 'available' &&
-    translators.has(pairKey(sourceLanguage, targetLanguage))
-  ) {
-    return snapshotStatus();
-  }
-  await getTranslator(sourceLanguage, targetLanguage);
-  return snapshotStatus();
+  await getTranslator(source, target);
+  return { ...getStatus(source, target) };
 }
 
-async function translateText(text, sourceLanguage, targetLanguage) {
-  const translator = await getTranslator(sourceLanguage, targetLanguage);
-  return translator.translate(text);
+async function translateWith(translator, text) {
+  return translateByLines(text, (line) => translator.translate(line));
 }
+
+async function translateText(text, source, target) {
+  const translator = await getTranslator(source, target);
+  try {
+    return await translateWith(translator, text);
+  } catch {
+    // A cached instance can die (e.g. the model was unloaded) and then fails
+    // with "Other generic failures occurred". Retry once with a fresh one.
+    translators.delete(pairKey(source, target));
+    translator.destroy?.();
+    return translateWith(await getTranslator(source, target), text);
+  }
+}
+
+const HANDLERS = {
+  OFFSCREEN_AVAILABILITY: ({ sourceLanguage, targetLanguage }) =>
+    refreshAvailability(sourceLanguage, targetLanguage).then(({ availability }) => ({
+      availability,
+    })),
+  OFFSCREEN_MODEL_STATUS: ({ sourceLanguage, targetLanguage }) =>
+    refreshAvailability(sourceLanguage, targetLanguage).then((status) => ({ status })),
+  OFFSCREEN_ENSURE_MODEL: ({ sourceLanguage, targetLanguage }) =>
+    ensureModel(sourceLanguage, targetLanguage).then((status) => ({ status })),
+  OFFSCREEN_TRANSLATE: ({ text, sourceLanguage, targetLanguage }) =>
+    translateText(text, sourceLanguage, targetLanguage).then((translatedText) => ({
+      translatedText,
+    })),
+};
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.target !== 'offscreen') return;
-
-  if (message.type === 'OFFSCREEN_AVAILABILITY') {
-    getAvailabilityCompat(message.sourceLanguage, message.targetLanguage)
-      .then((availability) => sendResponse({ availability }))
-      .catch((error) =>
-        sendResponse({ error: error.message || 'Could not check availability' })
-      );
-    return true;
-  }
-
-  if (message.type === 'OFFSCREEN_MODEL_STATUS') {
-    refreshAvailability(message.sourceLanguage, message.targetLanguage)
-      .then((status) => sendResponse({ status }))
-      .catch((error) =>
-        sendResponse({ error: error.message || 'Could not check status' })
-      );
-    return true;
-  }
-
-  if (message.type === 'OFFSCREEN_ENSURE_MODEL') {
-    ensureModel(message.sourceLanguage, message.targetLanguage)
-      .then((status) => sendResponse({ status }))
-      .catch((error) =>
-        sendResponse({ error: error.message || 'Could not download the model' })
-      );
-    return true;
-  }
-
-  if (message.type === 'OFFSCREEN_TRANSLATE') {
-    translateText(message.text, message.sourceLanguage, message.targetLanguage)
-      .then((translatedText) => sendResponse({ translatedText }))
-      .catch((error) =>
-        sendResponse({ error: error.message || 'Chrome translation failed' })
-      );
-    return true;
-  }
+  const handler = HANDLERS[message.type];
+  if (!handler) return;
+  handler(message)
+    .then(sendResponse)
+    .catch((error) =>
+      sendResponse({ error: error.message || t('errorChromeTranslation') })
+    );
+  return true;
 });
-
-async function getAvailabilityCompat(sourceLanguage, targetLanguage) {
-  const status = await refreshAvailability(sourceLanguage, targetLanguage);
-  return status.availability;
-}

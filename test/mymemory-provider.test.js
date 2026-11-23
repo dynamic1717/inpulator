@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   createMyMemoryProvider,
+  pickMyMemoryTranslation,
   splitIntoChunks,
 } from '../translation/providers/mymemory-provider.js';
 
@@ -35,8 +36,8 @@ test('provider preserves outer whitespace and serializes quota updates', async (
   });
 
   const [first, second] = await Promise.all([
-    provider.translate('  тест  '),
-    provider.translate('ещё'),
+    provider.translate('  тест  ', { source: 'ru', target: 'en' }),
+    provider.translate('ещё', { source: 'ru', target: 'en' }),
   ]);
 
   assert.equal(first, '  translated  ');
@@ -57,7 +58,10 @@ test('provider reports a timeout when the request is aborted', async () => {
       }),
   });
 
-  await assert.rejects(provider.translate('тест'), /Translation request timed out/);
+  await assert.rejects(
+    provider.translate('тест', { source: 'ru', target: 'en' }),
+    /Translation request timed out/
+  );
 });
 
 test('provider passes email as de query param when provided', async () => {
@@ -80,6 +84,38 @@ test('provider passes email as de query param when provided', async () => {
     },
   });
 
-  await provider.translate('тест');
+  await provider.translate('тест', { source: 'ru', target: 'en' });
   assert.match(requestedUrl, /de=inpulator-test%40example\.com/);
+});
+
+test('pickMyMemoryTranslation keeps clean translations as is', () => {
+  const data = { responseData: { translatedText: 'Hello, world' }, matches: [] };
+  assert.equal(pickMyMemoryTranslation(data, 'Привет, мир'), 'Hello, world');
+});
+
+test('pickMyMemoryTranslation prefers the machine match over tagged memory', () => {
+  const data = {
+    responseData: { translatedText: '<p>Meeting moved</p>' },
+    matches: [
+      { translation: '<p>Meeting moved</p>', 'created-by': 'Public_Corpora' },
+      { translation: 'The meeting was moved', 'created-by': 'MT!' },
+    ],
+  };
+  assert.equal(
+    pickMyMemoryTranslation(data, 'Встречу перенесли'),
+    'The meeting was moved'
+  );
+});
+
+test('pickMyMemoryTranslation strips markup when no clean match exists', () => {
+  const data = {
+    responseData: { translatedText: '<p>Tom &amp; Jerry&#39;s &lt;3</p>' },
+    matches: [],
+  };
+  assert.equal(pickMyMemoryTranslation(data, 'Том и Джерри'), "Tom & Jerry's <3");
+});
+
+test('pickMyMemoryTranslation keeps markup that exists in the source', () => {
+  const data = { responseData: { translatedText: '<b>Hello</b>' }, matches: [] };
+  assert.equal(pickMyMemoryTranslation(data, '<b>Привет</b>'), '<b>Hello</b>');
 });

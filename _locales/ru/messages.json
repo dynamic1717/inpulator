@@ -1,0 +1,257 @@
+{
+  "extName": {
+    "message": "Inpulator"
+  },
+  "extDescription": {
+    "message": "Переводит выделенный текст в полях ввода на выбранный язык."
+  },
+  "actionTitle": {
+    "message": "Inpulator — перевод текста"
+  },
+  "actionTitleDisabled": {
+    "message": "Inpulator — выключен"
+  },
+  "commandTranslate": {
+    "message": "Перевести выделенный текст на выбранный язык"
+  },
+  "buttonTranslate": {
+    "message": "Перевести"
+  },
+  "buttonTranslateTo": {
+    "message": "Перевести на $1"
+  },
+  "buttonQuotaUsed": {
+    "message": "$1 · использовано $2"
+  },
+  "buttonDownloadingPack": {
+    "message": "Загрузка языкового пакета… $1%"
+  },
+  "errorTranslationFailed": {
+    "message": "Не удалось перевести"
+  },
+  "errorLanguageNotDetected": {
+    "message": "Не удалось определить язык текста"
+  },
+  "errorSelectionChanged": {
+    "message": "Выделение изменилось — выделите текст ещё раз"
+  },
+  "errorReplaceFailed": {
+    "message": "Не удалось заменить текст"
+  },
+  "errorTimeout": {
+    "message": "Сервис перевода не ответил вовремя"
+  },
+  "errorNetwork": {
+    "message": "Ошибка сети"
+  },
+  "errorApiStatus": {
+    "message": "Ошибка сервиса перевода: $1"
+  },
+  "errorGoogle": {
+    "message": "Ошибка Google Translate: $1"
+  },
+  "errorMyMemory": {
+    "message": "Ошибка MyMemory: $1"
+  },
+  "errorMyMemoryDailyLimit": {
+    "message": "Дневной лимит переводов исчерпан"
+  },
+  "errorNotEnoughQuota": {
+    "message": "Не хватает лимита: выделено символов — $1, осталось — $2"
+  },
+  "errorGoogleKeyMissing": {
+    "message": "Не найден ключ Google API. Добавьте его в настройках расширения."
+  },
+  "errorProviderUnavailable": {
+    "message": "Провайдер $1 недоступен"
+  },
+  "errorChromeUnavailable": {
+    "message": "Chrome Translator недоступен. Скачайте пакет $1 или выберите другой провайдер."
+  },
+  "errorTranslatorApiMissing": {
+    "message": "Chrome Translator API недоступен. Нужен Chrome 138+ для компьютера."
+  },
+  "errorPackUnavailable": {
+    "message": "Языковой пакет Chrome для $1 нельзя скачать: эта пара не поддерживается."
+  },
+  "errorPackNotReady": {
+    "message": "Языковой пакет $1 на этом сайте ещё не готов. Нажмите кнопку перевода один раз (сочетание клавиш не может начать загрузку) или используйте «Скачать пакеты» в окне расширения."
+  },
+  "errorAvailabilityCheck": {
+    "message": "Не удалось проверить доступность"
+  },
+  "errorChromeTranslation": {
+    "message": "Chrome не смог перевести текст"
+  },
+  "errorQuotaRead": {
+    "message": "Не удалось прочитать лимит"
+  },
+  "errorModelStatus": {
+    "message": "Не удалось получить статус пакетов"
+  },
+  "errorModelDownload": {
+    "message": "Не удалось скачать пакеты"
+  },
+  "popupQuotaUsed": {
+    "message": "Использовано"
+  },
+  "popupQuotaUsedToday": {
+    "message": "Сегодня"
+  },
+  "popupQuotaUsedMonth": {
+    "message": "В этом месяце"
+  },
+  "popupQuotaLimit": {
+    "message": "Лимит"
+  },
+  "popupQuotaNoLimit": {
+    "message": "Без лимита"
+  },
+  "popupQuotaResetDay": {
+    "message": "Оценка на этом устройстве. Сбрасывается в 00:00 UTC."
+  },
+  "popupQuotaResetMonth": {
+    "message": "Оценка на этом устройстве. Сбрасывается 1-го числа (UTC)."
+  },
+  "popupTranslateButton": {
+    "message": "Кнопка перевода"
+  },
+  "popupTranslateButtonHint": {
+    "message": "Показывать рядом с выделенным текстом на всех сайтах."
+  },
+  "popupThisSite": {
+    "message": "Этот сайт"
+  },
+  "popupSiteUnavailable": {
+    "message": "Недоступно на этой странице"
+  },
+  "popupTranslateTo": {
+    "message": "Переводить на"
+  },
+  "popupProvider": {
+    "message": "Провайдер"
+  },
+  "popupProviderOnDevice": {
+    "message": "На устройстве"
+  },
+  "popupHintChrome": {
+    "message": "На устройстве, без ключа и лимитов. Приватно и офлайн после загрузки пакетов."
+  },
+  "popupHintGoogle": {
+    "message": "Отправляет текст в Google. Нужен свой ключ API."
+  },
+  "popupHintMyMemory": {
+    "message": "До 50 000 символов в день. Текст отправляется в MyMemory."
+  },
+  "popupPacks": {
+    "message": "Пакеты $1"
+  },
+  "popupPacksLabel": {
+    "message": "Языковые пакеты"
+  },
+  "popupPacksDownload": {
+    "message": "Скачать пакеты"
+  },
+  "popupPacksDownloading": {
+    "message": "Загрузка языковых пакетов…"
+  },
+  "popupPacksNotDownloaded": {
+    "message": "Не скачаны"
+  },
+  "popupPacksRequired": {
+    "message": "Нужны для перевода на устройстве $1"
+  },
+  "popupPacksUnavailable": {
+    "message": "Недоступны"
+  },
+  "popupPacksPairUnsupported": {
+    "message": "Пара $1 не поддерживается"
+  },
+  "popupPacksNoApi": {
+    "message": "Нет API"
+  },
+  "popupPacksNeedsChrome": {
+    "message": "Нужен Chrome 138+ для компьютера с Translator API"
+  },
+  "popupPacksFailed": {
+    "message": "Не удалось скачать пакеты"
+  },
+  "popupGoogleKey": {
+    "message": "Ключ Google API"
+  },
+  "popupGoogleKeyPlaceholder": {
+    "message": "Вставьте ключ Google API"
+  },
+  "popupGoogleKeySaved": {
+    "message": "Ключ сохранён"
+  },
+  "popupGoogleKeyRemove": {
+    "message": "Удалить ключ"
+  },
+  "popupAdvanced": {
+    "message": "Дополнительно"
+  },
+  "popupAdvancedHint": {
+    "message": "Исключить языки или изменить сочетание клавиш."
+  },
+  "popupSkipLanguages": {
+    "message": "Исключённые языки"
+  },
+  "popupSkipLanguagesHint": {
+    "message": "Кнопка не появится, если выделенный текст на одном из этих языков."
+  },
+  "popupSkipDetected": {
+    "message": "Определён в этом поле:"
+  },
+  "popupSkipAdd": {
+    "message": "Добавить язык…"
+  },
+  "popupSkipSearchHint": {
+    "message": "Начните вводить или выберите подсказку выше."
+  },
+  "popupSkipLanguage": {
+    "message": "Исключить: $1"
+  },
+  "popupEnableLanguage": {
+    "message": "Вернуть: $1"
+  },
+  "popupChangeShortcut": {
+    "message": "Изменить сочетание клавиш"
+  },
+  "menuTranslateTo": {
+    "message": "Переводить на"
+  },
+  "buttonMenuHint": {
+    "message": "Правый клик — сменить язык"
+  },
+  "errorDeepLKeyMissing": {
+    "message": "Не найден ключ DeepL API. Добавьте его в настройках расширения."
+  },
+  "errorDeepLPermission": {
+    "message": "Разрешите доступ к DeepL: снова выберите DeepL в окне расширения."
+  },
+  "errorDeepLKeyInvalid": {
+    "message": "DeepL не принял ключ API. Проверьте его в настройках расширения."
+  },
+  "errorDeepLQuota": {
+    "message": "Месячный лимит символов DeepL исчерпан"
+  },
+  "errorDeepLTooManyRequests": {
+    "message": "Слишком много запросов к DeepL. Попробуйте чуть позже."
+  },
+  "errorDeepL": {
+    "message": "Ошибка DeepL: $1"
+  },
+  "popupHintDeepL": {
+    "message": "Отправляет текст в DeepL. Нужен свой ключ API."
+  },
+  "popupDeepLKey": {
+    "message": "Ключ DeepL API"
+  },
+  "popupDeepLKeyPlaceholder": {
+    "message": "Вставьте ключ DeepL API"
+  },
+  "popupDeepLPermissionDenied": {
+    "message": "Для перевода DeepL нужен доступ к api-free.deepl.com / api.deepl.com."
+  }
+}

@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "Inpulator",
-  "version": "1.0.0",
-  "description": "Translate selected text in input fields to your chosen language.",
+  "name": "__MSG_extName__",
+  "version": "1.1.0",
+  "default_locale": "en",
+  "description": "__MSG_extDescription__",
+  "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "Inpulator — Translate text",
+    "default_title": "__MSG_actionTitle__",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -17,16 +19,14 @@
       "128": "icons/icon128.png"
     }
   },
-  "permissions": [
-    "clipboardRead",
-    "clipboardWrite",
-    "storage",
-    "offscreen",
-    "activeTab"
-  ],
+  "permissions": ["storage", "offscreen", "activeTab"],
   "host_permissions": [
     "https://api.mymemory.translated.net/*",
     "https://translation.googleapis.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://api-free.deepl.com/*",
+    "https://api.deepl.com/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -38,29 +38,16 @@
         "default": "Alt+Shift+T",
         "mac": "Option+Shift+T"
       },
-      "description": "Translate the selected text to the chosen language"
+      "description": "__MSG_commandTranslate__"
     }
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": [
-        "languages.js",
-        "settings.js",
-        "language-detect.js",
-        "shadow-dom.js",
-        "field-clipboard.js",
-        "field-native.js",
-        "field-editable.js",
-        "floating-ui.js",
-        "selection-context.js",
-        "selection-observer.js",
-        "runtime-client.js",
-        "content.js"
-      ],
-      "css": ["styles.css"],
+      "js": ["content.js"],
       "run_at": "document_idle",
-      "all_frames": true
+      "all_frames": true,
+      "match_origin_as_fallback": true
     }
   ]
 }

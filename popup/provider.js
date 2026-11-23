@@ -1,10 +1,19 @@
+import { t } from '../i18n.js';
 import { pairLabel } from './lib/format.js';
 
-const PROVIDER_HINTS = {
-  chrome: 'On-device, no API key or quota. Private and offline after packs download.',
-  google: 'Sends text to Google. Needs your own API key.',
-  mymemory: 'Up to 50,000 characters/day. Text is sent to MyMemory.',
+const PROVIDER_HINT_KEYS = {
+  chrome: 'popupHintChrome',
+  google: 'popupHintGoogle',
+  deepl: 'popupHintDeepL',
+  mymemory: 'popupHintMyMemory',
 };
+
+const API_KEY_COPY = {
+  google: { label: 'popupGoogleKey', placeholder: 'popupGoogleKeyPlaceholder' },
+  deepl: { label: 'popupDeepLKey', placeholder: 'popupDeepLKeyPlaceholder' },
+};
+
+const DEEPL_ORIGINS = ['https://api-free.deepl.com/*', 'https://api.deepl.com/*'];
 
 export function createProviderUi({
   segments,
@@ -16,9 +25,10 @@ export function createProviderUi({
   chromeModelBar,
   chromeModelHint,
   chromeModelDownload,
-  googleApiKeyField,
-  googleApiKey,
-  googleApiKeyClear,
+  apiKeyField,
+  apiKeyLabel,
+  apiKeyInput,
+  apiKeyClear,
   languagesApi,
   settingsApi,
   getSettings,
@@ -26,7 +36,9 @@ export function createProviderUi({
   onSettingsChange,
   onQuotaReload,
 }) {
-  let modelPollTimer = null;
+  // While the popup itself drives a download, offscreen status broadcasts
+  // know nothing about its progress and would reset the meter.
+  let popupDownloadInProgress = false;
 
   function getSelectedProvider() {
     const active = segments.find(
@@ -44,7 +56,9 @@ export function createProviderUi({
 
   function applyProviderHint(provider) {
     providerHint.hidden = false;
-    providerHint.textContent = PROVIDER_HINTS[provider] || PROVIDER_HINTS.chrome;
+    providerHint.textContent = t(
+      PROVIDER_HINT_KEYS[provider] || PROVIDER_HINT_KEYS.chrome
+    );
   }
 
   function getProbePair(settings) {
@@ -54,30 +68,15 @@ export function createProviderUi({
     );
   }
 
-  function stopModelPoll() {
-    if (modelPollTimer != null) {
-      clearInterval(modelPollTimer);
-      modelPollTimer = null;
-    }
-  }
-
-  function startModelPoll() {
-    if (modelPollTimer != null) return;
-    modelPollTimer = setInterval(() => {
-      loadChromeModelStatus({ silent: true });
-    }, 500);
-  }
-
   function applyChromeModelStatus(status, probe) {
     const label = pairLabel(languagesApi, probe.source, probe.target);
-    chromeModelLabel.textContent = `Packs ${label}`;
+    chromeModelLabel.textContent = t('popupPacks', label);
 
     if (!status) {
       chromeModelValue.textContent = '…';
       chromeModelMeter.hidden = true;
       chromeModelDownload.hidden = true;
       chromeModelHint.hidden = true;
-      stopModelPoll();
       return;
     }
 
@@ -91,12 +90,10 @@ export function createProviderUi({
       chromeModelDownload.hidden = true;
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Downloading language packs…';
-      startModelPoll();
+      chromeModelHint.textContent = t('popupPacksDownloading');
       return;
     }
 
-    stopModelPoll();
     chromeModelMeter.hidden = true;
     chromeModelBar.style.width = '0%';
 
@@ -108,33 +105,33 @@ export function createProviderUi({
     }
 
     if (status.availability === 'downloadable') {
-      chromeModelValue.textContent = 'Not downloaded';
+      chromeModelValue.textContent = t('popupPacksNotDownloaded');
       chromeModelDownload.hidden = false;
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = `Required for on-device translation ${label}`;
+      chromeModelHint.textContent = t('popupPacksRequired', label);
       return;
     }
 
     if (status.availability === 'unavailable') {
-      chromeModelValue.textContent = 'Unavailable';
+      chromeModelValue.textContent = t('popupPacksUnavailable');
       chromeModelDownload.hidden = true;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = status.error || `Pair ${label} is not supported`;
+      chromeModelHint.textContent =
+        status.error || t('popupPacksPairUnsupported', label);
       return;
     }
 
-    chromeModelValue.textContent = 'No API';
+    chromeModelValue.textContent = t('popupPacksNoApi');
     chromeModelDownload.hidden = true;
     chromeModelHint.hidden = false;
-    chromeModelHint.textContent =
-      status.error || 'Needs Chrome 138+ (desktop) with Translator API';
+    chromeModelHint.textContent = status.error || t('popupPacksNeedsChrome');
   }
 
-  async function loadChromeModelStatus({ silent = false } = {}) {
+  async function loadChromeModelStatus() {
+    if (popupDownloadInProgress) return;
     if (getSelectedProvider() !== 'chrome') {
       chromeModel.hidden = true;
-      stopModelPoll();
       return;
     }
 
@@ -148,33 +145,37 @@ export function createProviderUi({
       });
       applyChromeModelStatus(status, probe);
     } catch (error) {
-      if (!silent) {
-        applyChromeModelStatus(
-          {
-            availability: 'unsupported',
-            downloading: false,
-            progress: 0,
-            error: error.message,
-          },
-          probe
-        );
-      }
+      applyChromeModelStatus(
+        {
+          availability: 'unsupported',
+          downloading: false,
+          progress: 0,
+          error: error.message,
+        },
+        probe
+      );
     }
   }
 
-  async function loadGoogleApiKeyStatus() {
-    const apiKey = await settingsApi.getGoogleApiKey();
-    googleApiKey.value = '';
-    googleApiKey.placeholder = apiKey ? 'Key saved' : 'Paste your Google API key';
-    googleApiKeyClear.hidden = !apiKey;
+  /** Shows the personal API key field for providers that need one. */
+  async function loadApiKeyStatus() {
+    const provider = getSelectedProvider();
+    const copy = API_KEY_COPY[provider];
+    apiKeyField.hidden = !copy;
+    if (!copy) return;
+
+    const apiKey = await settingsApi.getApiKey(provider);
+    apiKeyLabel.textContent = t(copy.label);
+    apiKeyInput.value = '';
+    apiKeyInput.placeholder = t(apiKey ? 'popupGoogleKeySaved' : copy.placeholder);
+    apiKeyClear.hidden = !apiKey;
   }
 
   function apply(settings) {
     setSelectedProvider(settings.provider);
     applyProviderHint(settings.provider);
     chromeModel.hidden = settings.provider !== 'chrome';
-    googleApiKeyField.hidden = settings.provider !== 'google';
-    if (settings.provider !== 'chrome') stopModelPoll();
+    apiKeyField.hidden = !API_KEY_COPY[settings.provider];
   }
 
   async function selectProvider(provider) {
@@ -182,7 +183,26 @@ export function createProviderUi({
     await onSettingsChange?.(next);
     await onQuotaReload?.();
     await loadChromeModelStatus();
-    if (next.provider === 'google') await loadGoogleApiKeyStatus();
+    await loadApiKeyStatus();
+  }
+
+  async function downloadPackInPopup(probe) {
+    const Translator = globalThis.Translator;
+    if (!Translator) return;
+    const translator = await Translator.create({
+      sourceLanguage: probe.source,
+      targetLanguage: probe.target,
+      monitor(m) {
+        m.addEventListener('downloadprogress', (event) => {
+          const percent = Math.round(
+            Math.min(1, Math.max(0, Number(event.loaded) || 0)) * 100
+          );
+          chromeModelValue.textContent = `${percent}%`;
+          chromeModelBar.style.width = `${percent}%`;
+        });
+      },
+    });
+    translator.destroy?.();
   }
 
   function bind() {
@@ -190,21 +210,32 @@ export function createProviderUi({
       segment.addEventListener('click', async () => {
         const provider = segment.dataset.provider;
         if (!provider || provider === getSelectedProvider()) return;
+        // DeepL's hosts are optional permissions. Request them first, while
+        // this click still counts as a user gesture.
+        if (provider === 'deepl') {
+          const granted = await chrome.permissions
+            .request({ origins: DEEPL_ORIGINS })
+            .catch(() => false);
+          if (!granted) {
+            providerHint.textContent = t('popupDeepLPermissionDenied');
+            return;
+          }
+        }
         await selectProvider(provider);
       });
     }
 
-    googleApiKey.addEventListener('change', async () => {
-      const apiKey = googleApiKey.value.trim();
+    apiKeyInput.addEventListener('change', async () => {
+      const apiKey = apiKeyInput.value.trim();
       if (!apiKey) return;
-      await settingsApi.setGoogleApiKey(apiKey);
-      await loadGoogleApiKeyStatus();
+      await settingsApi.setApiKey(getSelectedProvider(), apiKey);
+      await loadApiKeyStatus();
       await onQuotaReload?.();
     });
 
-    googleApiKeyClear.addEventListener('click', async () => {
-      await settingsApi.setGoogleApiKey('');
-      await loadGoogleApiKeyStatus();
+    apiKeyClear.addEventListener('click', async () => {
+      await settingsApi.setApiKey(getSelectedProvider(), '');
+      await loadApiKeyStatus();
       await onQuotaReload?.();
     });
 
@@ -215,9 +246,14 @@ export function createProviderUi({
       chromeModelMeter.hidden = false;
       chromeModelBar.style.width = '0%';
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Downloading language packs…';
-      startModelPoll();
+      chromeModelHint.textContent = t('popupPacksDownloading');
+      popupDownloadInProgress = Boolean(globalThis.Translator);
       try {
+        // Downloading a pack requires transient user activation, which the
+        // offscreen document never has. The popup click does, so start the
+        // download here; the pack is then available browser-wide.
+        await downloadPackInPopup(probe);
+        popupDownloadInProgress = false;
         const status = await chrome.runtime.sendMessage({
           type: 'ENSURE_CHROME_MODEL',
           sourceLanguage: probe.source,
@@ -225,6 +261,7 @@ export function createProviderUi({
         });
         applyChromeModelStatus(status, probe);
       } catch (error) {
+        popupDownloadInProgress = false;
         applyChromeModelStatus(
           {
             availability: 'downloadable',
@@ -235,7 +272,7 @@ export function createProviderUi({
           probe
         );
         chromeModelHint.hidden = false;
-        chromeModelHint.textContent = error.message || 'Failed to download packs';
+        chromeModelHint.textContent = error.message || t('popupPacksFailed');
         chromeModelDownload.hidden = false;
         chromeModelDownload.disabled = false;
       }
@@ -244,14 +281,20 @@ export function createProviderUi({
     chrome.runtime.onMessage.addListener((message) => {
       if (
         message?.type !== 'CHROME_MODEL_STATUS' ||
+        popupDownloadInProgress ||
         getSelectedProvider() !== 'chrome'
       ) {
         return;
       }
-      applyChromeModelStatus(
-        message.status,
-        getProbePair(getSettings() || { targetLanguage: 'en' })
-      );
+      // The offscreen document broadcasts every pair it touches; show ours only.
+      const probe = getProbePair(getSettings() || { targetLanguage: 'en' });
+      if (
+        message.sourceLanguage !== probe.source ||
+        message.targetLanguage !== probe.target
+      ) {
+        return;
+      }
+      applyChromeModelStatus(message.status, probe);
     });
   }
 
@@ -260,7 +303,6 @@ export function createProviderUi({
     bind,
     getSelectedProvider,
     loadChromeModelStatus,
-    loadGoogleApiKeyStatus,
-    stopModelPoll,
+    loadApiKeyStatus,
   };
 }

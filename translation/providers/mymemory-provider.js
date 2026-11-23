@@ -1,4 +1,4 @@
-import { DEFAULT_LANGUAGE_PAIR } from '../provider.js';
+import { t } from '../../i18n.js';
 import { normalizeText, splitIntoChunks } from '../text-utils.js';
 
 const API_URL = 'https://api.mymemory.translated.net/get';
@@ -12,6 +12,45 @@ function todayKey() {
 }
 
 export { splitIntoChunks } from '../text-utils.js';
+
+const TAG_RE = /<\/?[a-z][^>]*>/i;
+const ENTITY_RE = /&(?:#\d+|#x[0-9a-f]+|[a-z]+);/i;
+const NAMED_ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+
+function hasMarkup(text) {
+  return TAG_RE.test(text) || ENTITY_RE.test(text);
+}
+
+function stripMarkup(text) {
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+    .replace(
+      /&([a-z]+);/gi,
+      (entity, name) => NAMED_ENTITIES[name.toLowerCase()] ?? entity
+    );
+}
+
+/**
+ * MyMemory may answer from its translation memory, whose entries sometimes
+ * carry HTML tags or entities. When the source has no markup, prefer the
+ * machine translation of this exact query (created-by "MT!") and otherwise
+ * strip the markup.
+ */
+export function pickMyMemoryTranslation(data, sourceText) {
+  const primary = data.responseData.translatedText;
+  if (hasMarkup(sourceText) || !hasMarkup(primary)) return primary;
+
+  const machine = (data.matches || []).find(
+    (match) =>
+      match?.['created-by'] === 'MT!' &&
+      typeof match.translation === 'string' &&
+      match.translation.trim() &&
+      !hasMarkup(match.translation)
+  );
+  return machine ? machine.translation : stripMarkup(primary);
+}
 
 export function createMyMemoryProvider({
   storage,
@@ -41,7 +80,6 @@ export function createMyMemoryProvider({
     return {
       charsUsed: record.charsUsed,
       limit: DAILY_CHAR_LIMIT,
-      dailyLimit: DAILY_CHAR_LIMIT,
       remaining: Math.max(0, DAILY_CHAR_LIMIT - record.charsUsed),
       period: 'day',
       provider: 'mymemory',
@@ -68,41 +106,39 @@ export function createMyMemoryProvider({
       response = await fetchImpl(url, { signal: controller.signal });
     } catch {
       if (controller.signal.aborted) {
-        throw new Error('Translation request timed out');
+        throw new Error(t('errorTimeout'));
       }
-      throw new Error('Network error');
+      throw new Error(t('errorNetwork'));
     } finally {
       clearTimeout(timeoutId);
     }
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    if (!response.ok) throw new Error(t('errorApiStatus', response.status));
 
     const data = await response.json();
     if (data.quotaFinished || data.responseStatus === 429) {
-      throw new Error('Daily translation limit reached');
+      throw new Error(t('errorMyMemoryDailyLimit'));
     }
     if (data.responseStatus !== 200 || !data.responseData?.translatedText) {
       throw new Error(
         data.responseDetails
-          ? `MyMemory error: ${data.responseDetails}`
-          : 'Translation failed'
+          ? t('errorMyMemory', data.responseDetails)
+          : t('errorTranslationFailed')
       );
     }
-    return data.responseData.translatedText;
+    return pickMyMemoryTranslation(data, text);
   }
 
   return {
     id: 'mymemory',
     isAvailable: async () => true,
     getQuota,
-    translate(text, options = DEFAULT_LANGUAGE_PAIR) {
+    translate(text, options) {
       return serialize(async () => {
         const { leadingWhitespace, content, trailingWhitespace } = normalizeText(text);
         const quota = await getQuota();
         if (content.length > quota.remaining) {
-          throw new Error(
-            `Not enough quota: ${content.length} characters selected, ${quota.remaining} remaining`
-          );
+          throw new Error(t('errorNotEnoughQuota', content.length, quota.remaining));
         }
 
         const currentEmail = String((await getEmail()) || '').trim();

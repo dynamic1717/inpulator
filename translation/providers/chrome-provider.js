@@ -1,15 +1,12 @@
-import { DEFAULT_LANGUAGE_PAIR } from '../provider.js';
+import { t } from '../../i18n.js';
 import { normalizeText } from '../text-utils.js';
 
-export function createChromeProvider({
-  sendToOffscreen,
-  languagePair = DEFAULT_LANGUAGE_PAIR,
-} = {}) {
+export function createChromeProvider({ sendToOffscreen } = {}) {
   if (typeof sendToOffscreen !== 'function') {
     throw new Error('createChromeProvider requires sendToOffscreen');
   }
 
-  async function checkAvailability(pair = languagePair) {
+  async function checkAvailability(pair) {
     const response = await sendToOffscreen({
       type: 'OFFSCREEN_AVAILABILITY',
       sourceLanguage: pair.source,
@@ -20,7 +17,7 @@ export function createChromeProvider({
 
   return {
     id: 'chrome',
-    async isAvailable(pair = languagePair) {
+    async isAvailable(pair) {
       try {
         const availability = await checkAvailability(pair);
         return (
@@ -36,13 +33,12 @@ export function createChromeProvider({
       return {
         charsUsed: 0,
         limit: null,
-        dailyLimit: null,
         remaining: null,
         period: 'none',
         provider: 'chrome',
       };
     },
-    async translate(text, options = languagePair) {
+    async translate(text, options) {
       const { leadingWhitespace, content, trailingWhitespace } = normalizeText(text);
       const response = await sendToOffscreen({
         type: 'OFFSCREEN_TRANSLATE',
@@ -51,7 +47,7 @@ export function createChromeProvider({
         targetLanguage: options.target,
       });
       const translated = response?.translatedText;
-      if (!translated) throw new Error('Chrome translation failed');
+      if (!translated) throw new Error(t('errorChromeTranslation'));
       return `${leadingWhitespace}${translated}${trailingWhitespace}`;
     },
   };
