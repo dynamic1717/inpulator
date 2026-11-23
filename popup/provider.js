@@ -27,6 +27,9 @@ export function createProviderUi({
   onQuotaReload,
 }) {
   let modelPollTimer = null;
+  // While the popup itself drives a download, offscreen status polls and
+  // broadcasts know nothing about its progress and would reset the meter.
+  let popupDownloadInProgress = false;
 
   function getSelectedProvider() {
     const active = segments.find(
@@ -132,6 +135,7 @@ export function createProviderUi({
   }
 
   async function loadChromeModelStatus({ silent = false } = {}) {
+    if (popupDownloadInProgress) return;
     if (getSelectedProvider() !== 'chrome') {
       chromeModel.hidden = true;
       stopModelPoll();
@@ -185,6 +189,25 @@ export function createProviderUi({
     if (next.provider === 'google') await loadGoogleApiKeyStatus();
   }
 
+  async function downloadPackInPopup(probe) {
+    const Translator = globalThis.Translator;
+    if (!Translator) return;
+    const translator = await Translator.create({
+      sourceLanguage: probe.source,
+      targetLanguage: probe.target,
+      monitor(m) {
+        m.addEventListener('downloadprogress', (event) => {
+          const percent = Math.round(
+            Math.min(1, Math.max(0, Number(event.loaded) || 0)) * 100
+          );
+          chromeModelValue.textContent = `${percent}%`;
+          chromeModelBar.style.width = `${percent}%`;
+        });
+      },
+    });
+    translator.destroy?.();
+  }
+
   function bind() {
     for (const segment of segments) {
       segment.addEventListener('click', async () => {
@@ -216,8 +239,14 @@ export function createProviderUi({
       chromeModelBar.style.width = '0%';
       chromeModelHint.hidden = false;
       chromeModelHint.textContent = 'Downloading language packs…';
-      startModelPoll();
+      popupDownloadInProgress = Boolean(globalThis.Translator);
+      if (!popupDownloadInProgress) startModelPoll();
       try {
+        // Downloading a pack requires transient user activation, which the
+        // offscreen document never has. The popup click does, so start the
+        // download here; the pack is then available browser-wide.
+        await downloadPackInPopup(probe);
+        popupDownloadInProgress = false;
         const status = await chrome.runtime.sendMessage({
           type: 'ENSURE_CHROME_MODEL',
           sourceLanguage: probe.source,
@@ -225,6 +254,7 @@ export function createProviderUi({
         });
         applyChromeModelStatus(status, probe);
       } catch (error) {
+        popupDownloadInProgress = false;
         applyChromeModelStatus(
           {
             availability: 'downloadable',
@@ -244,6 +274,7 @@ export function createProviderUi({
     chrome.runtime.onMessage.addListener((message) => {
       if (
         message?.type !== 'CHROME_MODEL_STATUS' ||
+        popupDownloadInProgress ||
         getSelectedProvider() !== 'chrome'
       ) {
         return;

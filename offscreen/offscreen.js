@@ -162,10 +162,14 @@ async function getTranslator(sourceLanguage, targetLanguage) {
       // Keep previous availability if the follow-up check fails.
     }
 
+    // Pack downloads need transient user activation, which this offscreen
+    // document never has; the popup's "Download packs" button does.
     const message =
       availability === 'unavailable'
         ? packUnavailableMessage(sourceLanguage, targetLanguage)
-        : formatTranslatorInstallError(error, sourceLanguage, targetLanguage);
+        : needsDownload && error?.name === 'NotAllowedError'
+          ? `The ${pairLabel(sourceLanguage, targetLanguage)} language pack is not downloaded yet. Open the extension popup and click "Download packs".`
+          : formatTranslatorInstallError(error, sourceLanguage, targetLanguage);
     modelStatus.error = message;
     if (availability === 'unavailable' || isGenericTranslatorFailure(error)) {
       modelStatus.availability = 'unavailable';

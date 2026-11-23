@@ -26,15 +26,19 @@
     return isEditableElement(element);
   }
 
-  function buildEditableContext(range, root) {
-    const text = range.toString();
+  // Range#toString() drops <br> and block boundaries ("Hello<div>World</div>"
+  // becomes "HelloWorld"); Selection#toString() keeps them as line breaks.
+  // rangeText is kept separately so isCurrent() can compare like with like.
+  function buildEditableContext(range, root, selection) {
+    const rangeText = range.toString();
+    const text = selection?.toString() || rangeText;
     if (!text.trim()) return null;
 
     return {
       type: 'editable',
       field: root,
       text,
-      meta: { range: range.cloneRange() },
+      meta: { range: range.cloneRange(), rangeText },
     };
   }
 
@@ -52,7 +56,7 @@
 
     if (!root || !isEditableRoot(root)) return null;
 
-    return buildEditableContext(range, root);
+    return buildEditableContext(range, root, selection);
   }
 
   function getEditableContext() {
@@ -68,7 +72,7 @@
     }
 
     const range = selection.getRangeAt(0);
-    return buildEditableContext(range, focusedRoot);
+    return buildEditableContext(range, focusedRoot, selection);
   }
 
   function getEditableButtonPosition(context, _clampToViewport) {

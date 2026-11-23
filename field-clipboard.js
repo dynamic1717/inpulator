@@ -55,11 +55,12 @@
 
     const text = selection.toString();
     if (text.trim()) {
+      const range = selection.getRangeAt(0).cloneRange();
       return {
         type: 'clipboard',
         field: null,
         text,
-        meta: { range: selection.getRangeAt(0).cloneRange() },
+        meta: { range, rangeText: range.toString() },
       };
     }
 
@@ -75,7 +76,7 @@
         type: 'clipboard',
         field: null,
         text: copiedText,
-        meta: { range },
+        meta: { range, rangeText: range.toString() },
       };
     } catch {
       return null;

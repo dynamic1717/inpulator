@@ -1,16 +1,10 @@
-:root {
+/* Custom properties are scoped to the button so they never override page variables. */
+#input-translate-btn {
+  all: initial;
   --button-size: 44px;
-  --surface: #ffffff;
-  --text: #1e2230;
-  --muted: #6b7280;
-  --border: #e7e5e0;
   --accent: #0e7c6b;
   --accent-soft: #e4f3ef;
   --track: #e7e5e0;
-}
-
-#input-translate-btn {
-  all: initial;
   position: fixed;
   z-index: 2147483647;
   display: inline-flex;

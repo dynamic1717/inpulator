@@ -64,12 +64,24 @@
     return false;
   }
 
+  // Descendants of a contenteditable host are editable too. Climb to the
+  // outermost editable element so the field is the editor root, not a span
+  // the editor may re-render away. parentElement stops at shadow boundaries,
+  // which contenteditable does not cross.
+  function getEditableRoot(element) {
+    let root = element;
+    while (root.parentElement && isEditableElement(root.parentElement)) {
+      root = root.parentElement;
+    }
+    return root;
+  }
+
   function findEditableFromNode(node) {
     let current = node;
 
     while (current) {
       if (current.nodeType === Node.ELEMENT_NODE && isEditableElement(current)) {
-        return current;
+        return getEditableRoot(current);
       }
 
       if (current.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
@@ -126,7 +138,7 @@
       const active = getDeepActiveElement();
       if (!active) return null;
 
-      if (isEditableElement(active)) return active;
+      if (isEditableElement(active)) return getEditableRoot(active);
 
       const editableFromActive = findEditableFromNode(active);
       if (editableFromActive) return editableFromActive;
