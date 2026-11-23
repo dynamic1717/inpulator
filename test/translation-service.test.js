@@ -178,3 +178,13 @@ test('service passes mapped language pair to provider', async () => {
   await service.translate('hello', { sourceLanguage: 'en' });
   assert.deepEqual(received, { source: 'en', target: 'zh-CN' });
 });
+
+test('service rejects a missing source language instead of guessing one', async () => {
+  const { providers } = makeProviders();
+  const service = createTranslationService({
+    providers,
+    getSettings: async () => ({ provider: 'mymemory', targetLanguage: 'en' }),
+  });
+
+  await assert.rejects(service.translate('тест'), /Could not detect the text language/);
+});

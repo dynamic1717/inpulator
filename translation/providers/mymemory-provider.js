@@ -1,4 +1,3 @@
-import { DEFAULT_LANGUAGE_PAIR } from '../provider.js';
 import { normalizeText, splitIntoChunks } from '../text-utils.js';
 
 const API_URL = 'https://api.mymemory.translated.net/get';
@@ -80,7 +79,6 @@ export function createMyMemoryProvider({
     return {
       charsUsed: record.charsUsed,
       limit: DAILY_CHAR_LIMIT,
-      dailyLimit: DAILY_CHAR_LIMIT,
       remaining: Math.max(0, DAILY_CHAR_LIMIT - record.charsUsed),
       period: 'day',
       provider: 'mymemory',
@@ -134,7 +132,7 @@ export function createMyMemoryProvider({
     id: 'mymemory',
     isAvailable: async () => true,
     getQuota,
-    translate(text, options = DEFAULT_LANGUAGE_PAIR) {
+    translate(text, options) {
       return serialize(async () => {
         const { leadingWhitespace, content, trailingWhitespace } = normalizeText(text);
         const quota = await getQuota();

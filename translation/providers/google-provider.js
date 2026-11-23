@@ -1,4 +1,3 @@
-import { DEFAULT_LANGUAGE_PAIR } from '../provider.js';
 import { normalizeText, splitIntoChunks } from '../text-utils.js';
 
 const API_URL = 'https://translation.googleapis.com/language/translate/v2';
@@ -39,7 +38,6 @@ export function createGoogleProvider({
     return {
       charsUsed: record.charsUsed,
       limit: MONTHLY_CHAR_LIMIT,
-      dailyLimit: MONTHLY_CHAR_LIMIT,
       remaining: Math.max(0, MONTHLY_CHAR_LIMIT - record.charsUsed),
       period: 'month',
       provider: 'google',
@@ -53,17 +51,18 @@ export function createGoogleProvider({
   }
 
   async function fetchChunk(text, { source, target }, currentApiKey) {
-    const url = new URL(API_URL);
-    url.searchParams.set('key', currentApiKey);
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     let response;
 
     try {
-      response = await fetchImpl(url, {
+      // Header instead of ?key= keeps the key out of URLs and request logs.
+      response = await fetchImpl(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': currentApiKey,
+        },
         body: JSON.stringify({
           q: text,
           source,
@@ -99,7 +98,7 @@ export function createGoogleProvider({
     id: 'google',
     isAvailable: async () => Boolean(await getApiKey()),
     getQuota,
-    translate(text, options = DEFAULT_LANGUAGE_PAIR) {
+    translate(text, options) {
       return serialize(async () => {
         const currentApiKey = await getApiKey();
         if (!currentApiKey) {
