@@ -1,25 +1,15 @@
 import { sendToOffscreen } from '../offscreen-manager.js';
-import { DEFAULT_LANGUAGE_PAIR } from './provider.js';
+import { ensureMyMemoryEmail, getGoogleApiKey, getSettings } from '../settings.js';
 import { mapLanguageCodes } from './languages.js';
 import { createChromeProvider } from './providers/chrome-provider.js';
 import { createGoogleProvider } from './providers/google-provider.js';
 import { createMyMemoryProvider } from './providers/mymemory-provider.js';
-import {
-  GOOGLE_API_KEY_STORAGE_KEY,
-  SETTINGS_KEY,
-  ensureMyMemoryEmail,
-  normalizeSettings,
-} from '../settings-defaults.js';
 
 const PROVIDER_CHROME = 'chrome';
 const PROVIDER_GOOGLE = 'google';
 const PROVIDER_MYMEMORY = 'mymemory';
 
-export function createTranslationService({
-  providers,
-  languagePair = DEFAULT_LANGUAGE_PAIR,
-  getSettings = defaultGetSettings,
-} = {}) {
+export function createTranslationService({ providers, getSettings } = {}) {
   if (!providers?.length)
     throw new Error('At least one translation provider is required');
 
@@ -43,10 +33,9 @@ export function createTranslationService({
   }
 
   async function resolveLanguagePair(sourceLanguage) {
+    if (!sourceLanguage) throw new Error('Could not detect the text language');
     const settings = await getSettings();
-    const source = sourceLanguage || languagePair.source;
-    const target = settings.targetLanguage || languagePair.target;
-    return { source, target };
+    return { source: sourceLanguage, target: settings.targetLanguage };
   }
 
   async function translateWithProvider(provider, text, pair) {
@@ -95,25 +84,6 @@ export function createTranslationService({
   };
 }
 
-async function defaultGetSettings() {
-  if (typeof chrome === 'undefined' || !chrome.storage?.local) {
-    return normalizeSettings(null);
-  }
-  const data = await chrome.storage.local.get(SETTINGS_KEY);
-  return normalizeSettings(data[SETTINGS_KEY]);
-}
-
-async function getGoogleApiKey() {
-  if (typeof chrome === 'undefined' || !chrome.storage?.local) return '';
-  const data = await chrome.storage.local.get(GOOGLE_API_KEY_STORAGE_KEY);
-  return String(data[GOOGLE_API_KEY_STORAGE_KEY] || '').trim();
-}
-
-async function getMyMemoryEmail() {
-  if (typeof chrome === 'undefined' || !chrome.storage?.local) return '';
-  return ensureMyMemoryEmail(chrome.storage.local);
-}
-
 let defaultService = null;
 
 function getDefaultService() {
@@ -121,9 +91,10 @@ function getDefaultService() {
     defaultService = createTranslationService({
       providers: [
         createChromeProvider({ sendToOffscreen }),
-        createGoogleProvider({ getApiKey: getGoogleApiKey }),
-        createMyMemoryProvider({ getEmail: getMyMemoryEmail }),
+        createGoogleProvider({ getApiKey: () => getGoogleApiKey() }),
+        createMyMemoryProvider({ getEmail: () => ensureMyMemoryEmail() }),
       ],
+      getSettings: () => getSettings(),
     });
   }
   return defaultService;

@@ -3,7 +3,7 @@
 export function getFlagUrl(lang) {
   const path = lang?.flag;
   if (!path) return null;
-  return new URL(`../../${path}`, import.meta.url).href;
+  return chrome.runtime.getURL(path);
 }
 
 export function appendLanguageLabel(el, lang) {

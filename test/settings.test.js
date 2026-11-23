@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { normalizeSettings } from '../settings-defaults.js';
+import { normalizeSettings } from '../settings.js';
 
 test('normalizes blocked domains and removes duplicates', () => {
   const settings = normalizeSettings({

@@ -3,6 +3,7 @@
   "name": "Inpulator",
   "version": "1.0.0",
   "description": "Translate selected text in input fields to your chosen language.",
+  "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -38,20 +39,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": [
-        "languages.js",
-        "settings.js",
-        "language-detect.js",
-        "shadow-dom.js",
-        "field-native.js",
-        "field-editable.js",
-        "floating-ui.js",
-        "selection-context.js",
-        "selection-observer.js",
-        "runtime-client.js",
-        "content.js"
-      ],
-      "css": ["styles.css"],
+      "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true,
       "match_origin_as_fallback": true
