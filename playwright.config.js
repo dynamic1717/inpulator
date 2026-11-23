@@ -6,5 +6,7 @@ export default defineConfig({
   workers: 1,
   timeout: 30_000,
   expect: { timeout: 5_000 },
-  reporter: process.env.CI ? 'github' : 'list',
+  // One retry on CI: a failure that passes on retry is reported as "flaky", not hidden.
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? [['github'], ['list']] : 'list',
 });

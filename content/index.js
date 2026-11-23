@@ -122,6 +122,10 @@ async function init() {
   } catch (error) {
     handleInvalidatedContext(error);
   }
+
+  // E2E builds only (removed from production bundles): tell tests that the
+  // listeners are attached, since document_idle injection can land after load.
+  if (__E2E__) document.documentElement.dataset.inpulatorReady = 'true';
 }
 
 async function resolveSelectionLanguage() {

@@ -1,4 +1,4 @@
-import { expect, myMemoryReply, test } from './fixtures.js';
+import { expect, myMemoryReply, test, waitForExtension } from './fixtures.js';
 
 const MYMEMORY = 'https://api.mymemory.translated.net/**';
 
@@ -75,7 +75,7 @@ test.describe('with a working translation service', () => {
     );
     const frame = page.frameLocator('#frame');
     const field = frame.locator('#field');
-    await expect(field).toBeVisible();
+    await waitForExtension(frame);
     await selectAll(field);
 
     await frame.locator('#input-translate-btn').click();
