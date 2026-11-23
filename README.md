@@ -21,8 +21,8 @@ Writing in one language while thinking in another? The usual path: type → open
 - **Circular floating button** — next to the selection; icon shows pair codes (`ES → EN`); quota usage as a progress ring
 - **Tooltip** — `ES → EN` or `ES → EN · 12% used` (exact counts live in settings)
 - **Shortcut** — `Alt+Shift+T` (on macOS: `Option+Shift+T`)
-- **Three providers** — MyMemory by default, Chrome Translator (on-device), Google Translate
-- **Settings** — segmented provider control, target language, Advanced (skip-languages combobox + change shortcut), Chrome packs, Google API key, on/off, per-site toggle
+- **Four providers** — MyMemory by default, Chrome Translator (on-device), Google Translate, DeepL
+- **Settings** — segmented provider control, target language, Advanced (skip-languages combobox + change shortcut), Chrome packs, Google / DeepL API key, on/off, per-site toggle
 - **Wide field support** — `<input>`, `<textarea>`, `contenteditable` (Gmail, ChatGPT, Slack, etc.), including Shadow DOM
 - **Clear states** — spinner while loading; alert icon on the button when something fails (no toast)
 
@@ -32,11 +32,17 @@ Writing in one language while thinking in another? The usual path: type → open
 2. Type into any supported field
 3. Select the fragment to translate
 4. Press the translate button **or** the shortcut
+
+More:
+
+- **No selection** — press the shortcut with the caret in a field to translate the whole field (in block editors like Notion, the block under the caret)
+- **Right-click the button** — pick another target language on the spot
+
 5. The selection is replaced with the translation
 
 The button appears when the selection language differs from the target and is not excluded. It disappears when the selection is cleared.
 
-Open settings from the extension icon: target language, site toggle, provider (MyMemory / On-device / Google), Chrome packs or Google API key, and Advanced for skip languages / shortcut.
+Open settings from the extension icon: target language, site toggle, provider (MyMemory / On-device / Google / DeepL), Chrome packs or the API key, and Advanced for skip languages / shortcut.
 
 ## Shortcut
 
@@ -74,11 +80,12 @@ Remap at: `chrome://extensions/shortcuts` (also linked from Advanced in the popu
 
 ## Providers and limits
 
-| Provider          | Limit (local)       | Notes                                                          |
-| ----------------- | ------------------- | -------------------------------------------------------------- |
-| MyMemory          | **50,000 / day**    | Default; cloud service, text is sent to MyMemory               |
-| Chrome Translator | **No limit**        | On-device, Chrome 138+ desktop; no progress ring on the button |
-| Google Translate  | **500,000 / month** | Requires your own API key in settings; text is sent to Google  |
+| Provider          | Limit (local)       | Notes                                                           |
+| ----------------- | ------------------- | --------------------------------------------------------------- |
+| MyMemory          | **50,000 / day**    | Default; cloud service, text is sent to MyMemory                |
+| Chrome Translator | **No limit**        | On-device, Chrome 138+ desktop; no progress ring on the button  |
+| Google Translate  | **500,000 / month** | Requires your own API key in settings; text is sent to Google   |
+| DeepL             | **Your plan**       | Your own API key (Free: 500,000 / month); usage read from DeepL |
 
 Google/MyMemory counters are stored locally and are an **estimate**, not exact API billing.
 

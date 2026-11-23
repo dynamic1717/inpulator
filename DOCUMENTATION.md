@@ -156,12 +156,13 @@ Key in `chrome.storage.local`:
 Separate storage keys (not inside `extensionSettings`):
 
 - `googleTranslateApiKey` — personal Google Cloud Translation key
+- `deeplApiKey` — personal DeepL API key
 - `myMemoryEmail` — auto-generated on install for MyMemory
 
 Fields:
 
 - **enabled** — global on/off; gates floating UI and translate. `chrome.action.setTitle` becomes `Inpulator — disabled` when off
-- **provider** — `mymemory` (default), `chrome`, or `google`
+- **provider** — `mymemory` (default), `chrome`, `google`, or `deepl`
 - **blockedDomains** — domains where translate UI is hidden (“This site” toggle)
 - **targetLanguage** — canonical target language id
 - **disabledSourceLanguages** — canonical source ids for which the button is hidden
@@ -236,6 +237,19 @@ Availability is reported **per origin**: a pack already on disk still reads as `
 | Quota        | Local 50,000 / day (`dailyUsage`)                       |
 | Email (`de`) | Auto-generated on install and stored in `myMemoryEmail` |
 
+### DeepL
+
+| Parameter | Value                                                                                                      |
+| --------- | ---------------------------------------------------------------------------------------------------------- |
+| Endpoint  | `POST /v2/translate` on `api-free.deepl.com` (keys ending `:fx`) or `api.deepl.com`                        |
+| Auth      | `Authorization: DeepL-Auth-Key <key>`                                                                      |
+| Codes     | Source: bare upper-case (`RU`); target variants where DeepL requires them (`EN-US`, `PT-BR`, `ZH-HANS`)    |
+| Chunk     | ~20,000 characters per request (DeepL caps a request at 128 KiB)                                           |
+| Quota     | `GET /v2/usage` (`character_count` / `character_limit`), cached 60 s; local estimate when it can't be read |
+
+- The API hosts are `optional_host_permissions`; the popup requests them when DeepL is selected (the click is the user gesture). Without them translation reports how to grant access.
+- Errors: 403 → invalid key, 456 → monthly quota used up, 429 → too many requests.
+
 ### Provider selection
 
 `translation/translation-service.js` reads `settings.provider`.
@@ -286,7 +300,8 @@ Instead:
 - Loading: spinner; button disabled
 - Errors: `setError()` — alert icon + `input-translate-btn--error`; full message in `title` / `aria-label`
 - No toast / snackbar UI — user-visible errors go through the floating button
-- Hotkey: **Alt+Shift+T** (`chrome.commands` → background → content script)
+- Hotkey: **Alt+Shift+T** (`chrome.commands` → background → content script); with only a caret, the whole field is selected first (`content/whole-field.js`: nearest element with an explicit `contenteditable`, so a Notion block rather than the page)
+- Right-click on the button: target-language menu inside the shadow root (excludes the source language; keeps the page selection)
 - The hotkey acts only on selections inside editable fields; page text outside fields is ignored
 - Ctrl+Z works after replace (via `insertText` / native value)
 
@@ -423,6 +438,12 @@ input-translate-ext/
 - Circular floating button + quota progress ring (replaces on-button char counter)
 - Removed `showCharCounter` setting
 - Removed grayscale `*-disabled` action icons (color icons + title when disabled)
+
+### Phase 12 ✅
+
+- Hotkey without a selection translates the whole field (the block under the caret in block editors)
+- Right-click on the button opens a target-language menu
+- DeepL provider (optional host permissions, usage from `/v2/usage`)
 
 ### Phase 11 ✅
 
