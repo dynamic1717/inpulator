@@ -28,7 +28,9 @@
 
     return {
       ...context,
-      meta: context.meta?.range ? { range: context.meta.range.cloneRange() } : {},
+      meta: context.meta?.range
+        ? { ...context.meta, range: context.meta.range.cloneRange() }
+        : {},
     };
   }
 
@@ -43,7 +45,7 @@
     return Boolean(
       context.meta?.range &&
       (context.type === 'clipboard' || context.field?.isConnected) &&
-      context.meta.range.toString() === context.text
+      context.meta.range.toString() === (context.meta.rangeText ?? context.text)
     );
   }
 
