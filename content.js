@@ -100,6 +100,10 @@
           return;
         }
         if (message.type === 'GET_SELECTION_LANGUAGE') {
+          // With all_frames every frame receives this. Only a frame that has
+          // a selection answers; others stay silent so they can't win the
+          // race with a null response.
+          if (!hasSelectedText()) return;
           resolveSelectionLanguage()
             .then((sourceLanguage) => sendResponse({ sourceLanguage }))
             .catch(() => sendResponse({ sourceLanguage: null }));
