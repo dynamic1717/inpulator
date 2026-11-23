@@ -13,6 +13,7 @@ import {
 } from './extension-context.js';
 import { BUTTON_SIZE, createFloatingUi } from './floating-ui.js';
 import { isTranslatable, resolveSourceLanguage } from './language.js';
+import { isOnDeviceSupportedHere, translateOnDevice } from './on-device.js';
 import * as runtime from './runtime-client.js';
 import * as contextTools from './selection-context.js';
 import { createSelectionObserver } from './selection-observer.js';
@@ -247,6 +248,26 @@ async function onTranslateClick() {
   if (activeContext && !isTranslating) await translateSelection(activeContext);
 }
 
+async function requestTranslation(text, sourceLanguage) {
+  if (settings.provider === 'chrome' && isOnDeviceSupportedHere()) {
+    try {
+      // Runs inside the click's user gesture, so missing packs download here.
+      return await translateOnDevice(text, {
+        sourceLanguage,
+        targetLanguage: settings.targetLanguage,
+        onProgress: (loaded) => ui.setLoading({ progress: loaded }),
+      });
+    } catch (error) {
+      // No gesture (e.g. the Chrome command hotkey) or the page's permissions
+      // policy blocks the API: fall back to the offscreen document, which
+      // works when the pack is already usable for the extension.
+      if (error?.name !== 'NotAllowedError') throw error;
+    }
+  }
+  const response = await runtime.translate(text, { sourceLanguage });
+  return response.translatedText;
+}
+
 async function translateSelection(context) {
   const snapshot = contextTools.clone(context);
   isTranslating = true;
@@ -258,9 +279,7 @@ async function translateSelection(context) {
     if (!sourceLanguage) {
       throw new Error('Could not detect the text language');
     }
-    const { translatedText } = await runtime.translate(snapshot.text, {
-      sourceLanguage,
-    });
+    const translatedText = await requestTranslation(snapshot.text, sourceLanguage);
     if (!contextTools.isCurrent(snapshot)) {
       throw new Error('The selection changed; select the text again');
     }

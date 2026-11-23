@@ -178,12 +178,18 @@ export function createFloatingUi({ onTranslate }) {
       if (button) setPosition(position);
     },
     setTranslate,
-    setLoading() {
+    /** @param {{ progress?: number }} [options] progress 0..1 of a language pack download */
+    setLoading({ progress } = {}) {
       ensureButton();
       button.classList.remove('input-translate-btn--error');
-      button.innerHTML = LOADING_ICON;
       button.disabled = true;
-      button.removeAttribute('title');
+      if (progress == null) {
+        button.innerHTML = LOADING_ICON;
+        button.removeAttribute('title');
+        return;
+      }
+      button.innerHTML = `${buildProgressRing(progress)}${LOADING_ICON}`;
+      button.title = `Downloading language pack… ${Math.round(progress * 100)}%`;
     },
     setError(message) {
       ensureButton();

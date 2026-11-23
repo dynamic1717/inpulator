@@ -26,9 +26,8 @@ export function createProviderUi({
   onSettingsChange,
   onQuotaReload,
 }) {
-  let modelPollTimer = null;
-  // While the popup itself drives a download, offscreen status polls and
-  // broadcasts know nothing about its progress and would reset the meter.
+  // While the popup itself drives a download, offscreen status broadcasts
+  // know nothing about its progress and would reset the meter.
   let popupDownloadInProgress = false;
 
   function getSelectedProvider() {
@@ -57,20 +56,6 @@ export function createProviderUi({
     );
   }
 
-  function stopModelPoll() {
-    if (modelPollTimer != null) {
-      clearInterval(modelPollTimer);
-      modelPollTimer = null;
-    }
-  }
-
-  function startModelPoll() {
-    if (modelPollTimer != null) return;
-    modelPollTimer = setInterval(() => {
-      loadChromeModelStatus({ silent: true });
-    }, 500);
-  }
-
   function applyChromeModelStatus(status, probe) {
     const label = pairLabel(languagesApi, probe.source, probe.target);
     chromeModelLabel.textContent = `Packs ${label}`;
@@ -80,7 +65,6 @@ export function createProviderUi({
       chromeModelMeter.hidden = true;
       chromeModelDownload.hidden = true;
       chromeModelHint.hidden = true;
-      stopModelPoll();
       return;
     }
 
@@ -95,11 +79,9 @@ export function createProviderUi({
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
       chromeModelHint.textContent = 'Downloading language packs…';
-      startModelPoll();
       return;
     }
 
-    stopModelPoll();
     chromeModelMeter.hidden = true;
     chromeModelBar.style.width = '0%';
 
@@ -134,11 +116,10 @@ export function createProviderUi({
       status.error || 'Needs Chrome 138+ (desktop) with Translator API';
   }
 
-  async function loadChromeModelStatus({ silent = false } = {}) {
+  async function loadChromeModelStatus() {
     if (popupDownloadInProgress) return;
     if (getSelectedProvider() !== 'chrome') {
       chromeModel.hidden = true;
-      stopModelPoll();
       return;
     }
 
@@ -152,17 +133,15 @@ export function createProviderUi({
       });
       applyChromeModelStatus(status, probe);
     } catch (error) {
-      if (!silent) {
-        applyChromeModelStatus(
-          {
-            availability: 'unsupported',
-            downloading: false,
-            progress: 0,
-            error: error.message,
-          },
-          probe
-        );
-      }
+      applyChromeModelStatus(
+        {
+          availability: 'unsupported',
+          downloading: false,
+          progress: 0,
+          error: error.message,
+        },
+        probe
+      );
     }
   }
 
@@ -178,7 +157,6 @@ export function createProviderUi({
     applyProviderHint(settings.provider);
     chromeModel.hidden = settings.provider !== 'chrome';
     googleApiKeyField.hidden = settings.provider !== 'google';
-    if (settings.provider !== 'chrome') stopModelPoll();
   }
 
   async function selectProvider(provider) {
@@ -240,7 +218,6 @@ export function createProviderUi({
       chromeModelHint.hidden = false;
       chromeModelHint.textContent = 'Downloading language packs…';
       popupDownloadInProgress = Boolean(globalThis.Translator);
-      if (!popupDownloadInProgress) startModelPoll();
       try {
         // Downloading a pack requires transient user activation, which the
         // offscreen document never has. The popup click does, so start the
@@ -279,10 +256,15 @@ export function createProviderUi({
       ) {
         return;
       }
-      applyChromeModelStatus(
-        message.status,
-        getProbePair(getSettings() || { targetLanguage: 'en' })
-      );
+      // The offscreen document broadcasts every pair it touches; show ours only.
+      const probe = getProbePair(getSettings() || { targetLanguage: 'en' });
+      if (
+        message.sourceLanguage !== probe.source ||
+        message.targetLanguage !== probe.target
+      ) {
+        return;
+      }
+      applyChromeModelStatus(message.status, probe);
     });
   }
 
@@ -292,6 +274,5 @@ export function createProviderUi({
     getSelectedProvider,
     loadChromeModelStatus,
     loadGoogleApiKeyStatus,
-    stopModelPoll,
   };
 }
