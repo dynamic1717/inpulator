@@ -84,6 +84,7 @@ For Chrome Translator, packs are downloaded **for the needed language pair** (fr
 - The button does not appear when source equals target, or the source is excluded
 - Does not work in **cross-origin iframes**
 - Rich text inserts plain text — formatting is lost
+- Only text inside editable fields is translated; selecting regular page text does nothing
 - After updating the extension, **reload the tab** (F5)
 
 ## Install
