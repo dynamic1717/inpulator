@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { sendToOffscreen } from '../offscreen-manager.js';
 import { ensureMyMemoryEmail, getGoogleApiKey, getSettings } from '../settings.js';
 import { mapLanguageCodes } from './languages.js';
@@ -33,7 +34,7 @@ export function createTranslationService({ providers, getSettings } = {}) {
   }
 
   async function resolveLanguagePair(sourceLanguage) {
-    if (!sourceLanguage) throw new Error('Could not detect the text language');
+    if (!sourceLanguage) throw new Error(t('errorLanguageNotDetected'));
     const settings = await getSettings();
     return { source: sourceLanguage, target: settings.targetLanguage };
   }
@@ -62,16 +63,14 @@ export function createTranslationService({ providers, getSettings } = {}) {
 
       if (!available) {
         if (preferredId === PROVIDER_GOOGLE) {
-          throw new Error(
-            'Google API key not found. Add it in the extension settings.'
-          );
+          throw new Error(t('errorGoogleKeyMissing'));
         }
         if (preferredId === PROVIDER_CHROME) {
           throw new Error(
-            `Chrome Translator is unavailable. Download the ${mappedPair.source}→${mappedPair.target} pack or choose another provider.`
+            t('errorChromeUnavailable', `${mappedPair.source}→${mappedPair.target}`)
           );
         }
-        throw new Error(`Provider ${provider.id} is unavailable`);
+        throw new Error(t('errorProviderUnavailable', provider.id));
       }
 
       return translateWithProvider(provider, text, pair);

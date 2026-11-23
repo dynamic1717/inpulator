@@ -1,5 +1,6 @@
 /** Content script entry: shows the translate button and replaces selections. */
 
+import { t } from '../i18n.js';
 import {
   DEFAULT_SETTINGS,
   getSettings,
@@ -277,11 +278,11 @@ async function translateSelection(context) {
   try {
     const sourceLanguage = await resolveSourceLanguage(snapshot);
     if (!sourceLanguage) {
-      throw new Error('Could not detect the text language');
+      throw new Error(t('errorLanguageNotDetected'));
     }
     const translatedText = await requestTranslation(snapshot.text, sourceLanguage);
     if (!contextTools.isCurrent(snapshot)) {
-      throw new Error('The selection changed; select the text again');
+      throw new Error(t('errorSelectionChanged'));
     }
     contextTools.applyTranslation(snapshot, translatedText);
     hideButton();
@@ -289,7 +290,7 @@ async function translateSelection(context) {
     renderedContext = null;
   } catch (error) {
     if (handleInvalidatedContext(error)) return;
-    ui.setError(error.message || 'Translation failed');
+    ui.setError(error.message || t('errorTranslationFailed'));
   } finally {
     isTranslating = false;
   }

@@ -1,5 +1,6 @@
 /** A "selection context" is the selected text plus where it lives and how to replace it. */
 
+import { t } from '../i18n.js';
 import {
   getEditableButtonPosition,
   getEditableContext,
@@ -76,6 +77,6 @@ export function applyTranslation(context, text) {
     return;
   }
   if (!replaceEditableSelection(context, text)) {
-    throw new Error('Could not replace the text');
+    throw new Error(t('errorReplaceFailed'));
   }
 }

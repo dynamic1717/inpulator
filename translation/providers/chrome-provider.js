@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js';
 import { normalizeText } from '../text-utils.js';
 
 export function createChromeProvider({ sendToOffscreen } = {}) {
@@ -46,7 +47,7 @@ export function createChromeProvider({ sendToOffscreen } = {}) {
         targetLanguage: options.target,
       });
       const translated = response?.translatedText;
-      if (!translated) throw new Error('Chrome translation failed');
+      if (!translated) throw new Error(t('errorChromeTranslation'));
       return `${leadingWhitespace}${translated}${trailingWhitespace}`;
     },
   };

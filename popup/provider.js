@@ -1,9 +1,10 @@
+import { t } from '../i18n.js';
 import { pairLabel } from './lib/format.js';
 
-const PROVIDER_HINTS = {
-  chrome: 'On-device, no API key or quota. Private and offline after packs download.',
-  google: 'Sends text to Google. Needs your own API key.',
-  mymemory: 'Up to 50,000 characters/day. Text is sent to MyMemory.',
+const PROVIDER_HINT_KEYS = {
+  chrome: 'popupHintChrome',
+  google: 'popupHintGoogle',
+  mymemory: 'popupHintMyMemory',
 };
 
 export function createProviderUi({
@@ -46,7 +47,9 @@ export function createProviderUi({
 
   function applyProviderHint(provider) {
     providerHint.hidden = false;
-    providerHint.textContent = PROVIDER_HINTS[provider] || PROVIDER_HINTS.chrome;
+    providerHint.textContent = t(
+      PROVIDER_HINT_KEYS[provider] || PROVIDER_HINT_KEYS.chrome
+    );
   }
 
   function getProbePair(settings) {
@@ -58,7 +61,7 @@ export function createProviderUi({
 
   function applyChromeModelStatus(status, probe) {
     const label = pairLabel(languagesApi, probe.source, probe.target);
-    chromeModelLabel.textContent = `Packs ${label}`;
+    chromeModelLabel.textContent = t('popupPacks', label);
 
     if (!status) {
       chromeModelValue.textContent = '…';
@@ -78,7 +81,7 @@ export function createProviderUi({
       chromeModelDownload.hidden = true;
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Downloading language packs…';
+      chromeModelHint.textContent = t('popupPacksDownloading');
       return;
     }
 
@@ -93,27 +96,27 @@ export function createProviderUi({
     }
 
     if (status.availability === 'downloadable') {
-      chromeModelValue.textContent = 'Not downloaded';
+      chromeModelValue.textContent = t('popupPacksNotDownloaded');
       chromeModelDownload.hidden = false;
       chromeModelDownload.disabled = false;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = `Required for on-device translation ${label}`;
+      chromeModelHint.textContent = t('popupPacksRequired', label);
       return;
     }
 
     if (status.availability === 'unavailable') {
-      chromeModelValue.textContent = 'Unavailable';
+      chromeModelValue.textContent = t('popupPacksUnavailable');
       chromeModelDownload.hidden = true;
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = status.error || `Pair ${label} is not supported`;
+      chromeModelHint.textContent =
+        status.error || t('popupPacksPairUnsupported', label);
       return;
     }
 
-    chromeModelValue.textContent = 'No API';
+    chromeModelValue.textContent = t('popupPacksNoApi');
     chromeModelDownload.hidden = true;
     chromeModelHint.hidden = false;
-    chromeModelHint.textContent =
-      status.error || 'Needs Chrome 138+ (desktop) with Translator API';
+    chromeModelHint.textContent = status.error || t('popupPacksNeedsChrome');
   }
 
   async function loadChromeModelStatus() {
@@ -148,7 +151,9 @@ export function createProviderUi({
   async function loadGoogleApiKeyStatus() {
     const apiKey = await settingsApi.getGoogleApiKey();
     googleApiKey.value = '';
-    googleApiKey.placeholder = apiKey ? 'Key saved' : 'Paste your Google API key';
+    googleApiKey.placeholder = t(
+      apiKey ? 'popupGoogleKeySaved' : 'popupGoogleKeyPlaceholder'
+    );
     googleApiKeyClear.hidden = !apiKey;
   }
 
@@ -216,7 +221,7 @@ export function createProviderUi({
       chromeModelMeter.hidden = false;
       chromeModelBar.style.width = '0%';
       chromeModelHint.hidden = false;
-      chromeModelHint.textContent = 'Downloading language packs…';
+      chromeModelHint.textContent = t('popupPacksDownloading');
       popupDownloadInProgress = Boolean(globalThis.Translator);
       try {
         // Downloading a pack requires transient user activation, which the
@@ -242,7 +247,7 @@ export function createProviderUi({
           probe
         );
         chromeModelHint.hidden = false;
-        chromeModelHint.textContent = error.message || 'Failed to download packs';
+        chromeModelHint.textContent = error.message || t('popupPacksFailed');
         chromeModelDownload.hidden = false;
         chromeModelDownload.disabled = false;
       }

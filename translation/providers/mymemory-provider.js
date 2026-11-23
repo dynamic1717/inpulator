@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js';
 import { normalizeText, splitIntoChunks } from '../text-utils.js';
 
 const API_URL = 'https://api.mymemory.translated.net/get';
@@ -105,24 +106,24 @@ export function createMyMemoryProvider({
       response = await fetchImpl(url, { signal: controller.signal });
     } catch {
       if (controller.signal.aborted) {
-        throw new Error('Translation request timed out');
+        throw new Error(t('errorTimeout'));
       }
-      throw new Error('Network error');
+      throw new Error(t('errorNetwork'));
     } finally {
       clearTimeout(timeoutId);
     }
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    if (!response.ok) throw new Error(t('errorApiStatus', response.status));
 
     const data = await response.json();
     if (data.quotaFinished || data.responseStatus === 429) {
-      throw new Error('Daily translation limit reached');
+      throw new Error(t('errorMyMemoryDailyLimit'));
     }
     if (data.responseStatus !== 200 || !data.responseData?.translatedText) {
       throw new Error(
         data.responseDetails
-          ? `MyMemory error: ${data.responseDetails}`
-          : 'Translation failed'
+          ? t('errorMyMemory', data.responseDetails)
+          : t('errorTranslationFailed')
       );
     }
     return pickMyMemoryTranslation(data, text);
@@ -137,9 +138,7 @@ export function createMyMemoryProvider({
         const { leadingWhitespace, content, trailingWhitespace } = normalizeText(text);
         const quota = await getQuota();
         if (content.length > quota.remaining) {
-          throw new Error(
-            `Not enough quota: ${content.length} characters selected, ${quota.remaining} remaining`
-          );
+          throw new Error(t('errorNotEnoughQuota', content.length, quota.remaining));
         }
 
         const currentEmail = String((await getEmail()) || '').trim();

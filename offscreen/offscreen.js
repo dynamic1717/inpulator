@@ -1,5 +1,6 @@
 /** Offscreen document host for the on-device Chrome Translator API. */
 
+import { t } from '../i18n.js';
 import { translateByLines } from '../translation/text-utils.js';
 
 /** @typedef {{ availability: string|null, downloading: boolean, progress: number, error: string|null }} ModelStatus */
@@ -19,18 +20,16 @@ function pairLabel(source, target) {
 }
 
 function packUnavailableMessage(source, target) {
-  return `Could not download the Chrome language pack for ${pairLabel(source, target)}. Download is unavailable for this pair.`;
+  return t('errorPackUnavailable', pairLabel(source, target));
 }
 
 function packNotDownloadedMessage(source, target) {
-  return `The ${pairLabel(source, target)} language pack is not ready on this site yet. Click the translate button once (the shortcut can't start a download) or use "Download packs" in the extension popup.`;
+  return t('errorPackNotReady', pairLabel(source, target));
 }
 
 function assertTranslatorApi() {
   if (!('Translator' in globalThis)) {
-    throw new Error(
-      'Chrome Translator API is unavailable. Requires Chrome 138+ (desktop).'
-    );
+    throw new Error(t('errorTranslatorApiMissing'));
   }
 }
 
@@ -81,7 +80,7 @@ async function refreshAvailability(source, target) {
       availability: 'unsupported',
       downloading: false,
       progress: 0,
-      error: error.message || 'Could not check availability',
+      error: error.message || t('errorAvailabilityCheck'),
     });
   }
 }
@@ -149,7 +148,7 @@ async function getTranslator(source, target) {
     } else if (needsDownload || latest === 'downloadable' || latest === 'downloading') {
       message = packNotDownloadedMessage(source, target);
     } else {
-      message = error?.message || 'Chrome translation failed';
+      message = error?.message || t('errorChromeTranslation');
     }
 
     updateStatus(source, target, {
@@ -213,7 +212,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   handler(message)
     .then(sendResponse)
     .catch((error) =>
-      sendResponse({ error: error.message || 'Chrome translation failed' })
+      sendResponse({ error: error.message || t('errorChromeTranslation') })
     );
   return true;
 });

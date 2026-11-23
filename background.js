@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { sendToOffscreen } from './offscreen-manager.js';
 import {
   SETTINGS_KEY,
@@ -8,11 +9,10 @@ import {
 } from './settings.js';
 import { getQuota, translate } from './translation/translation-service.js';
 
-const TITLE_ENABLED = 'Inpulator — Translate text';
-const TITLE_DISABLED = 'Inpulator — disabled';
-
 function applyActionTitle(enabled) {
-  return chrome.action.setTitle({ title: enabled ? TITLE_ENABLED : TITLE_DISABLED });
+  return chrome.action.setTitle({
+    title: t(enabled ? 'actionTitle' : 'actionTitleDisabled'),
+  });
 }
 
 async function syncActionFromSettings() {
@@ -50,12 +50,12 @@ const MESSAGE_HANDLERS = {
   GET_CHROME_MODEL_STATUS: ({ sourceLanguage, targetLanguage }) =>
     sendToOffscreen({ type: 'OFFSCREEN_MODEL_STATUS', sourceLanguage, targetLanguage })
       .then((response) => response.status)
-      .catch((error) => chromeModelError(error, 'Cannot get model status')),
+      .catch((error) => chromeModelError(error, t('errorModelStatus'))),
 
   ENSURE_CHROME_MODEL: ({ sourceLanguage, targetLanguage }) =>
     sendToOffscreen({ type: 'OFFSCREEN_ENSURE_MODEL', sourceLanguage, targetLanguage })
       .then((response) => response.status)
-      .catch((error) => chromeModelError(error, 'Cannot download model')),
+      .catch((error) => chromeModelError(error, t('errorModelDownload'))),
 
   GET_TRANSLATE_SHORTCUT: async () => {
     const commands = await chrome.commands.getAll().catch(() => []);
@@ -64,11 +64,11 @@ const MESSAGE_HANDLERS = {
   },
 
   GET_QUOTA: () =>
-    getQuota().catch((error) => ({ error: error.message || 'Cannot read quota' })),
+    getQuota().catch((error) => ({ error: error.message || t('errorQuotaRead') })),
 
   TRANSLATE: ({ text, sourceLanguage }) =>
     translate(text, { sourceLanguage }).catch((error) => ({
-      error: error.message || 'Translation failed',
+      error: error.message || t('errorTranslationFailed'),
     })),
 };
 

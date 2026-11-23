@@ -20,6 +20,7 @@ const zip = process.argv.includes('--zip');
 
 const STATIC_FILES = [
   'manifest.json',
+  '_locales',
   'icons',
   'popup/popup.html',
   'popup/popup.css',

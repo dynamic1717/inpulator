@@ -21,7 +21,9 @@
           <h1 class="popup__title">Inpulator</h1>
         </div>
         <div class="popup__quota" aria-labelledby="quota-label">
-          <span id="quota-label" class="popup__quota-label">Used</span>
+          <span id="quota-label" class="popup__quota-label" data-i18n="popupQuotaUsed"
+            >Used</span
+          >
           <span id="quota-value" class="popup__mono popup__quota-value">… / …</span>
         </div>
       </header>
@@ -31,15 +33,19 @@
 
       <label class="popup__block popup__toggle">
         <span class="popup__toggle-text">
-          <span class="popup__label">Translate button</span>
-          <span class="popup__hint">Show it near selected text, everywhere.</span>
+          <span class="popup__label" data-i18n="popupTranslateButton"
+            >Translate button</span
+          >
+          <span class="popup__hint" data-i18n="popupTranslateButtonHint"
+            >Show it near selected text, everywhere.</span
+          >
         </span>
         <input id="enabled-toggle" type="checkbox" role="switch" />
       </label>
 
       <label class="popup__block popup__toggle">
         <span class="popup__toggle-text">
-          <span class="popup__label">This site</span>
+          <span class="popup__label" data-i18n="popupThisSite">This site</span>
           <span id="site-toggle-hint" class="popup__hint popup__mono">…</span>
         </span>
         <input id="site-toggle" type="checkbox" role="switch" />
@@ -47,7 +53,12 @@
 
       <div class="popup__block">
         <div class="popup__field">
-          <span class="popup__label" id="target-language-label">Translate to</span>
+          <span
+            class="popup__label"
+            id="target-language-label"
+            data-i18n="popupTranslateTo"
+            >Translate to</span
+          >
           <div class="popup__dropdown-wrap">
             <button
               type="button"
@@ -73,7 +84,9 @@
 
       <div class="popup__block">
         <div class="popup__field">
-          <span class="popup__label" id="provider-label">Provider</span>
+          <span class="popup__label" id="provider-label" data-i18n="popupProvider"
+            >Provider</span
+          >
           <div
             class="popup__segments"
             role="radiogroup"
@@ -96,6 +109,7 @@
               aria-checked="false"
               data-provider="chrome"
               id="provider-chrome"
+              data-i18n="popupProviderOnDevice"
             >
               On-device
             </button>
@@ -115,20 +129,33 @@
 
         <div id="chrome-model" class="popup__model" hidden>
           <div class="popup__row">
-            <span id="chrome-model-label" class="popup__label">Language packs</span>
+            <span
+              id="chrome-model-label"
+              class="popup__label"
+              data-i18n="popupPacksLabel"
+              >Language packs</span
+            >
             <span id="chrome-model-value" class="popup__mono popup__value">…</span>
           </div>
           <div id="chrome-model-meter" class="popup__meter" hidden>
             <div id="chrome-model-bar" class="popup__meter-bar"></div>
           </div>
           <p id="chrome-model-hint" class="popup__hint" hidden></p>
-          <button id="chrome-model-download" type="button" class="popup__button" hidden>
+          <button
+            id="chrome-model-download"
+            type="button"
+            class="popup__button"
+            data-i18n="popupPacksDownload"
+            hidden
+          >
             Download packs
           </button>
         </div>
 
         <div id="google-api-key-field" class="popup__field" hidden>
-          <label class="popup__label" for="google-api-key">Google API key</label>
+          <label class="popup__label" for="google-api-key" data-i18n="popupGoogleKey"
+            >Google API key</label
+          >
           <div class="popup__input-wrap">
             <input
               id="google-api-key"
@@ -137,12 +164,14 @@
               autocomplete="off"
               spellcheck="false"
               placeholder="Paste your Google API key"
+              data-i18n-placeholder="popupGoogleKeyPlaceholder"
             />
             <button
               id="google-api-key-clear"
               type="button"
               class="popup__input-action"
               aria-label="Remove API key"
+              data-i18n-aria-label="popupGoogleKeyRemove"
               hidden
             >
               ×
@@ -154,21 +183,27 @@
       <details class="popup__advanced">
         <summary class="popup__advanced-summary">
           <span class="popup__advanced-title">
-            <span class="popup__label">Advanced</span>
+            <span class="popup__label" data-i18n="popupAdvanced">Advanced</span>
             <span class="popup__chevron" aria-hidden="true"></span>
           </span>
-          <span class="popup__hint">Skip languages or change the shortcut.</span>
+          <span class="popup__hint" data-i18n="popupAdvancedHint"
+            >Skip languages or change the shortcut.</span
+          >
         </summary>
 
         <div class="popup__advanced-body">
           <fieldset class="popup__fieldset">
-            <legend class="popup__label">Skip languages</legend>
-            <p class="popup__hint">
+            <legend class="popup__label" data-i18n="popupSkipLanguages">
+              Skip languages
+            </legend>
+            <p class="popup__hint" data-i18n="popupSkipLanguagesHint">
               The button won't appear when selected text is in these languages.
             </p>
 
             <div id="skip-suggest" class="popup__suggest" hidden>
-              <span class="popup__suggest-label">Detected in this input:</span>
+              <span class="popup__suggest-label" data-i18n="popupSkipDetected"
+                >Detected in this input:</span
+              >
               <button id="skip-suggest-chip" type="button" class="popup__suggest-chip">
                 <span class="popup__suggest-plus" aria-hidden="true">+</span>
                 <span id="skip-suggest-text"></span>
@@ -183,6 +218,7 @@
                   class="popup__combobox-input"
                   type="text"
                   placeholder="Add a language..."
+                  data-i18n-placeholder="popupSkipAdd"
                   autocomplete="off"
                   spellcheck="false"
                   role="combobox"
@@ -199,10 +235,17 @@
               ></ul>
             </div>
 
-            <p class="popup__hint">Type to search or pick from the suggestion above.</p>
+            <p class="popup__hint" data-i18n="popupSkipSearchHint">
+              Type to search or pick from the suggestion above.
+            </p>
           </fieldset>
 
-          <button id="shortcut-link" type="button" class="popup__link-button">
+          <button
+            id="shortcut-link"
+            type="button"
+            class="popup__link-button"
+            data-i18n="popupChangeShortcut"
+          >
             Change shortcut
           </button>
         </div>
