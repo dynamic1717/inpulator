@@ -268,7 +268,7 @@ body {
 
 .popup__segments {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 2px;
   padding: 2px;
   border-radius: 10px;

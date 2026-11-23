@@ -58,6 +58,8 @@ const shared = {
   legalComments: 'none',
   // E2E builds open the button's shadow root so Playwright locators can reach it.
   define: { __E2E__: String(e2e) },
+  // Drops dead branches such as `if (__E2E__)`; names and layout stay readable.
+  minifySyntax: true,
   logLevel: 'info',
 };
 

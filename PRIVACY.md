@@ -1,6 +1,6 @@
 # Privacy Policy — Inpulator
 
-**Effective date:** 23 November 2026
+**Effective date:** 24 November 2026
 
 This policy describes how the Inpulator Chrome extension (“Inpulator”, “the extension”, “we”) handles information. Inpulator is developed by [dynamic1717](https://github.com/dynamic1717). Contact: [disre1717@gmail.com](mailto:disre1717@gmail.com).
 
@@ -12,8 +12,8 @@ Inpulator translates text you select in an input field, textarea, or editable ar
 
 - Translation happens only after you select text and click the translate button or use the shortcut.
 - **On-device (Chrome Translator):** selected text stays on your computer.
-- **MyMemory or Google:** selected text is sent to that provider’s API because you chose it in settings.
-- Settings, usage counters, and any Google API key you paste are stored locally in Chrome (`chrome.storage.local`). We do not operate a backend that receives your text or settings.
+- **MyMemory, Google or DeepL:** selected text is sent to that provider’s API because you chose it in settings.
+- Settings, usage counters, and any Google or DeepL API key you paste are stored locally in Chrome (`chrome.storage.local`). We do not operate a backend that receives your text or settings.
 - Uninstalling the extension deletes local data stored by Inpulator.
 
 ---
@@ -29,6 +29,7 @@ When you translate, the extension reads only the highlighted fragment in a suppo
 | Chrome Translator        | On-device, via Chrome’s Translator API                     | Provider set to On-device                 |
 | MyMemory                 | `https://api.mymemory.translated.net/`                     | Provider set to MyMemory                  |
 | Google Cloud Translation | `https://translation.googleapis.com/language/translate/v2` | Provider set to Google, with your API key |
+| DeepL                    | `https://api-free.deepl.com/` or `https://api.deepl.com/`  | Provider set to DeepL, with your API key  |
 
 Password fields are not used. The extension does not send the rest of the page, browsing history, cookies, or form data you did not select.
 
@@ -39,8 +40,8 @@ Source language is detected locally (`chrome.i18n.detectLanguage` and script heu
 Kept in `chrome.storage.local` on your profile, not uploaded to us:
 
 - Settings: extension on/off, target language, provider, blocked sites (“This site”), skip-languages
-- Approximate usage counters for MyMemory (per day) and Google (per calendar month)
-- A Google Cloud Translation API key, if you paste one
+- Approximate usage counters for MyMemory (per day), Google and DeepL (per calendar month)
+- A Google Cloud Translation API key and/or a DeepL API key, if you paste them
 - A generated MyMemory address (`inpulator-…@example.com`) used only as MyMemory’s `de` parameter for quota. It is not a real mailbox and is not your personal email.
 
 ### 2.3 Current site hostname
@@ -59,6 +60,7 @@ When you open the popup, the extension reads the hostname of the active tab so t
 | Show quota on the button/popup    | Local character counters                              |
 | Per-site on/off                   | Hostname of the active tab                            |
 | Google Translate requests         | Your API key (sent only to Google, as you configured) |
+| DeepL requests and usage          | Your API key (sent only to DeepL, as you configured)  |
 | MyMemory quota                    | Generated `de` email                                  |
 
 We do not use this information for advertising, profiling, or resale.
@@ -73,7 +75,9 @@ We do not receive your translations. Depending on the provider you choose, text 
 
 **Google Cloud Translation** — only if you select Google and save your own API key. Selected text and the key are sent to `translation.googleapis.com`. Google’s practices: [Google Privacy Policy](https://policies.google.com/privacy) and [Cloud Data Processing](https://cloud.google.com/terms/data-processing-addendum). Restrict the key to Cloud Translation API and set quotas. Do not share the key.
 
-**Chrome Translator (On-device)** — translation runs in an offscreen document shipped with the extension. Chrome may download official language packs for the pair. Text is not sent to MyMemory or Google through Inpulator in this mode.
+**DeepL** — only if you select DeepL, allow access to DeepL’s API hosts when Chrome asks, and save your own API key. Selected text, the language pair, and the key are sent to `api-free.deepl.com` (Free keys) or `api.deepl.com` (Pro keys); the extension also reads your character usage from DeepL’s `/v2/usage` endpoint. DeepL’s practices: [DeepL Privacy Policy](https://www.deepl.com/privacy).
+
+**Chrome Translator (On-device)** — translation runs in an offscreen document shipped with the extension. Chrome may download official language packs for the pair. Text is not sent to MyMemory, Google or DeepL through Inpulator in this mode.
 
 Those providers may have their own logs and retention. We do not control them.
 
@@ -83,7 +87,7 @@ Those providers may have their own logs and retention. We do not control them.
 
 Chrome shows these permissions because the extension needs them to work. They are not used to collect extra data.
 
-**storage** — local settings, usage counters, optional Google API key, generated MyMemory address.
+**storage** — local settings, usage counters, optional Google and DeepL API keys, generated MyMemory address.
 
 **offscreen** — host for Chrome’s on-device Translator API (service workers cannot run it). No extra window is shown.
 
@@ -98,6 +102,10 @@ Chrome shows these permissions because the extension needs them to work. They ar
 - `https://api.mymemory.translated.net/*` — MyMemory, only when that provider is selected
 - `https://translation.googleapis.com/*` — Google Cloud Translation, only when that provider is selected and a key is saved
 
+Optional host permissions, requested only when you choose DeepL:
+
+- `https://api-free.deepl.com/*`, `https://api.deepl.com/*` — DeepL API
+
 The content script is injected on sites you visit (`<all_urls>`) so the button can appear next to a selection in an editable field on email, chat, and forms. The script does not scrape pages. You can turn the button off globally or for the current site.
 
 ---
@@ -106,7 +114,7 @@ The content script is injected on sites you visit (`<all_urls>`) so the button c
 
 Inpulator does **not** use remote code.
 
-All JavaScript, CSS, and HTML ship in the extension package. The extension does not load scripts from the network, does not use `eval` / `new Function` on remote strings, and does not execute API responses. MyMemory and Google return JSON; the translated string is inserted into the field as text. Language packs for On-device translation are downloaded by Chrome’s Translator API, not as extension JavaScript.
+All JavaScript, CSS, and HTML ship in the extension package. The extension does not load scripts from the network, does not use `eval` / `new Function` on remote strings, and does not execute API responses. MyMemory, Google and DeepL return JSON; the translated string is inserted into the field as text. Language packs for On-device translation are downloaded by Chrome’s Translator API, not as extension JavaScript.
 
 ---
 
@@ -127,7 +135,7 @@ Local data stays in your Chrome profile until you change it, clear site/extensio
 
 Cloud providers may retain request data under their own policies. To stop sending text to them, switch the provider to On-device or turn the extension off.
 
-To request help with this policy, email [disre1717@gmail.com](mailto:disre1717@gmail.com). We cannot delete copies held by MyMemory or Google; contact those services directly.
+To request help with this policy, email [disre1717@gmail.com](mailto:disre1717@gmail.com). We cannot delete copies held by MyMemory, Google or DeepL; contact those services directly.
 
 ---
 
@@ -139,7 +147,7 @@ Inpulator is not directed at children under 13 (or the equivalent age in your co
 
 ## 11. International transfers
 
-If you use MyMemory or Google, selected text is processed on those providers’ infrastructure, which may be outside your country. On-device translation does not send the text through those APIs.
+If you use MyMemory, Google or DeepL, selected text is processed on those providers’ infrastructure, which may be outside your country. On-device translation does not send the text through those APIs.
 
 ---
 

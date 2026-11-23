@@ -6,6 +6,16 @@ const extensionPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist-
 
 export const PAGE_URL = 'https://inpulator.test/';
 
+/**
+ * Waits until the content script in this page or frame has attached its
+ * listeners. It is injected at document_idle, which can come after the load
+ * event that goto() waits for; selecting text earlier would go unnoticed.
+ * @param {import('@playwright/test').Page | import('@playwright/test').FrameLocator} target
+ */
+export function waitForExtension(target) {
+  return target.locator('html[data-inpulator-ready]').waitFor({ state: 'attached' });
+}
+
 /** Fake MyMemory: uppercases the text so results are easy to assert. */
 export function myMemoryReply(url) {
   const q = new URL(url).searchParams.get('q') || '';
@@ -61,6 +71,7 @@ export const test = base.extend({
         })
       );
       await page.goto(PAGE_URL);
+      await waitForExtension(page);
       return page;
     });
   },

@@ -1,11 +1,11 @@
 import { localizeDocument, t } from '../i18n.js';
 import * as languagesApi from '../translation/languages.js';
 import {
-  getGoogleApiKey,
+  getApiKey,
   getSettings,
   isHostBlocked,
   normalizeDomain,
-  setGoogleApiKey,
+  setApiKey,
   setSettings,
   subscribeToSettings,
 } from '../settings.js';
@@ -14,7 +14,7 @@ import { createQuotaUi } from './quota.js';
 import { createSkipLanguagesUi } from './skip-languages.js';
 import { createTargetLanguageUi } from './target-language.js';
 
-const settingsApi = { getSettings, setSettings, getGoogleApiKey, setGoogleApiKey };
+const settingsApi = { getSettings, setSettings, getApiKey, setApiKey };
 
 const enabledToggle = document.getElementById('enabled-toggle');
 const siteToggle = document.getElementById('site-toggle');
@@ -43,9 +43,10 @@ const providerUi = createProviderUi({
   chromeModelBar: document.getElementById('chrome-model-bar'),
   chromeModelHint: document.getElementById('chrome-model-hint'),
   chromeModelDownload: document.getElementById('chrome-model-download'),
-  googleApiKeyField: document.getElementById('google-api-key-field'),
-  googleApiKey: document.getElementById('google-api-key'),
-  googleApiKeyClear: document.getElementById('google-api-key-clear'),
+  apiKeyField: document.getElementById('api-key-field'),
+  apiKeyLabel: document.getElementById('api-key-label'),
+  apiKeyInput: document.getElementById('api-key'),
+  apiKeyClear: document.getElementById('api-key-clear'),
   languagesApi,
   settingsApi,
   getSettings: () => state.settings,
@@ -137,7 +138,7 @@ async function init() {
   state.selectionSourceLanguage = await resolveSelectionSourceLanguage();
   const settings = await settingsApi.getSettings();
   applySettingsToUi(settings);
-  await providerUi.loadGoogleApiKeyStatus();
+  await providerUi.loadApiKeyStatus();
   await quotaUi.load();
   await providerUi.loadChromeModelStatus();
 

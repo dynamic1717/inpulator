@@ -123,6 +123,16 @@
             >
               Google
             </button>
+            <button
+              type="button"
+              class="popup__segment"
+              role="radio"
+              aria-checked="false"
+              data-provider="deepl"
+              id="provider-deepl"
+            >
+              DeepL
+            </button>
           </div>
           <span id="provider-hint" class="popup__hint"></span>
         </div>
@@ -152,22 +162,18 @@
           </button>
         </div>
 
-        <div id="google-api-key-field" class="popup__field" hidden>
-          <label class="popup__label" for="google-api-key" data-i18n="popupGoogleKey"
-            >Google API key</label
-          >
+        <div id="api-key-field" class="popup__field" hidden>
+          <label id="api-key-label" class="popup__label" for="api-key">API key</label>
           <div class="popup__input-wrap">
             <input
-              id="google-api-key"
+              id="api-key"
               class="popup__input"
               type="password"
               autocomplete="off"
               spellcheck="false"
-              placeholder="Paste your Google API key"
-              data-i18n-placeholder="popupGoogleKeyPlaceholder"
             />
             <button
-              id="google-api-key-clear"
+              id="api-key-clear"
               type="button"
               class="popup__input-action"
               aria-label="Remove API key"

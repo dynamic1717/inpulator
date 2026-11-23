@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   getSettings,
   isHostBlocked,
+  setSettings,
   subscribeToSettings,
 } from '../settings.js';
 import {
@@ -18,6 +19,7 @@ import { isOnDeviceSupportedHere, translateOnDevice } from './on-device.js';
 import * as runtime from './runtime-client.js';
 import * as contextTools from './selection-context.js';
 import { createSelectionObserver } from './selection-observer.js';
+import { hasFocusedFieldText, selectWholeField } from './whole-field.js';
 
 let activeContext = null;
 let renderedContext = null;
@@ -27,7 +29,12 @@ let selectionGateVersion = 0;
 let lastHotkeyAt = 0;
 let macFallbackEnabled = false;
 let settings = { ...DEFAULT_SETTINGS };
-const ui = createFloatingUi({ onTranslate: onTranslateClick });
+const ui = createFloatingUi({
+  onTranslate: onTranslateClick,
+  // The settings subscription re-renders the button with the new pair.
+  onPickLanguage: (targetLanguage) =>
+    setSettings({ targetLanguage }).catch(handleInvalidatedContext),
+});
 
 // all_frames + match_origin_as_fallback can inject into the same frame only
 // once, but guard anyway so a double injection never doubles the listeners.
@@ -115,6 +122,10 @@ async function init() {
   } catch (error) {
     handleInvalidatedContext(error);
   }
+
+  // E2E builds only (removed from production bundles): tell tests that the
+  // listeners are attached, since document_idle injection can land after load.
+  if (__E2E__) document.documentElement.dataset.inpulatorReady = 'true';
 }
 
 async function resolveSelectionLanguage() {
@@ -147,7 +158,8 @@ function onMacHotkeyKeydown(event) {
   if (event.code !== 'KeyT' || !event.altKey || !event.shiftKey) return;
   if (event.ctrlKey || event.metaKey || event.repeat) return;
   // Swallow the key only when we are going to act on it.
-  if (!isActive() || !isExtensionEnabled() || !hasSelectedText()) return;
+  if (!isActive() || !isExtensionEnabled()) return;
+  if (!hasSelectedText() && !hasFocusedFieldText()) return;
   event.preventDefault();
   event.stopPropagation();
   onHotkeyTranslate();
@@ -234,8 +246,10 @@ async function onHotkeyTranslate() {
   lastHotkeyAt = now;
 
   try {
-    // Only selections inside editable fields are translated in place.
-    const context = contextTools.detect();
+    // Only text inside editable fields is translated in place. With a caret
+    // but no selection, the whole field is selected and translated.
+    let context = contextTools.detect();
+    if (!context?.text?.trim() && selectWholeField()) context = contextTools.detect();
     if (await isTranslatable(context, settings)) {
       await translateSelection(context);
     }

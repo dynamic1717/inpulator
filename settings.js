@@ -8,6 +8,7 @@ import {
 
 export const SETTINGS_KEY = 'extensionSettings';
 export const GOOGLE_API_KEY_STORAGE_KEY = 'googleTranslateApiKey';
+export const DEEPL_API_KEY_STORAGE_KEY = 'deeplApiKey';
 export const MYMEMORY_EMAIL_STORAGE_KEY = 'myMemoryEmail';
 
 export const DEFAULT_SETTINGS = Object.freeze({
@@ -18,7 +19,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   disabledSourceLanguages: [],
 });
 
-const PROVIDERS = new Set(['mymemory', 'chrome', 'google']);
+const PROVIDERS = new Set(['mymemory', 'chrome', 'google', 'deepl']);
 
 export function generateMyMemoryEmail() {
   const bytes = new Uint8Array(8);
@@ -103,17 +104,27 @@ export function subscribeToSettings(onChange) {
   return () => chrome.storage.onChanged.removeListener(listener);
 }
 
-export async function getGoogleApiKey(storage = chrome.storage.local) {
-  const data = await storage.get(GOOGLE_API_KEY_STORAGE_KEY);
-  return String(data[GOOGLE_API_KEY_STORAGE_KEY] || '').trim();
+/** Storage key of each provider's personal API key. */
+export const API_KEY_STORAGE_KEYS = Object.freeze({
+  google: GOOGLE_API_KEY_STORAGE_KEY,
+  deepl: DEEPL_API_KEY_STORAGE_KEY,
+});
+
+export async function getApiKey(provider, storage = chrome.storage.local) {
+  const key = API_KEY_STORAGE_KEYS[provider];
+  if (!key) return '';
+  const data = await storage.get(key);
+  return String(data[key] || '').trim();
 }
 
-export async function setGoogleApiKey(value, storage = chrome.storage.local) {
+export async function setApiKey(provider, value, storage = chrome.storage.local) {
+  const key = API_KEY_STORAGE_KEYS[provider];
+  if (!key) throw new Error(`No API key for provider ${provider}`);
   const apiKey = String(value || '').trim();
   if (apiKey) {
-    await storage.set({ [GOOGLE_API_KEY_STORAGE_KEY]: apiKey });
+    await storage.set({ [key]: apiKey });
   } else {
-    await storage.remove(GOOGLE_API_KEY_STORAGE_KEY);
+    await storage.remove(key);
   }
   return apiKey;
 }
