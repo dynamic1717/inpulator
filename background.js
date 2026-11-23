@@ -101,6 +101,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'GET_TRANSLATE_SHORTCUT') {
+    chrome.commands
+      .getAll()
+      .then((commands) => {
+        const command = commands.find(({ name }) => name === 'translate-selection');
+        sendResponse({ shortcut: command?.shortcut || '' });
+      })
+      .catch(() => sendResponse({ shortcut: '' }));
+    return true;
+  }
+
   if (message.type === 'GET_QUOTA') {
     getQuota()
       .then(sendResponse)

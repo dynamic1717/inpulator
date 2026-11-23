@@ -48,8 +48,13 @@
     return response;
   }
 
+  function getTranslateShortcut() {
+    return sendMessage({ type: 'GET_TRANSLATE_SHORTCUT' });
+  }
+
   window.InputTranslate.runtimeClient = {
     getQuota,
+    getTranslateShortcut,
     getQuotaRemaining,
     invalidateQuotaCache,
     translate,

@@ -13,6 +13,7 @@
   let buttonRenderVersion = 0;
   let selectionGateVersion = 0;
   let lastHotkeyAt = 0;
+  let macFallbackEnabled = false;
   let settings = { ...settingsApi?.DEFAULT_SETTINGS };
   const ui = InputTranslate.floatingUi?.create({ onTranslate: onTranslateClick });
 
@@ -83,8 +84,12 @@
     });
 
     // Chrome may leave Option+Shift shortcuts unbound on macOS. Capture the
-    // in-page shortcut there so the generated character is not inserted.
-    if (navigator.platform.includes('Mac')) {
+    // in-page shortcut there so the generated character is not inserted —
+    // but only while the command really is unbound (the user may have
+    // remapped it, and then Option+Shift+T must type normally).
+    if (isMac()) {
+      refreshMacFallbackState();
+      window.addEventListener('focus', refreshMacFallbackState);
       document.addEventListener('keydown', onMacHotkeyKeydown, true);
     }
 
@@ -116,9 +121,32 @@
     );
   }
 
+  function hasSelectedText() {
+    if (!isActive() || !contextTools) return false;
+    return Boolean(contextTools.detect()?.text?.trim());
+  }
+
+  function isMac() {
+    const platform = navigator.userAgentData?.platform || navigator.platform || '';
+    return /mac/i.test(platform);
+  }
+
+  async function refreshMacFallbackState() {
+    if (!isActive()) return;
+    try {
+      const response = await runtime.getTranslateShortcut();
+      macFallbackEnabled = !response?.shortcut;
+    } catch (error) {
+      handleInvalidatedContext(error);
+    }
+  }
+
   function onMacHotkeyKeydown(event) {
+    if (!macFallbackEnabled) return;
     if (event.code !== 'KeyT' || !event.altKey || !event.shiftKey) return;
     if (event.ctrlKey || event.metaKey || event.repeat) return;
+    // Swallow the key only when we are going to act on it.
+    if (!isActive() || !isExtensionEnabled() || !hasSelectedText()) return;
     event.preventDefault();
     event.stopPropagation();
     onHotkeyTranslate();
