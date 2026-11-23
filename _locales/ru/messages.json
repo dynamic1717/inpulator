@@ -217,5 +217,11 @@
   },
   "popupChangeShortcut": {
     "message": "Изменить сочетание клавиш"
+  },
+  "menuTranslateTo": {
+    "message": "Переводить на"
+  },
+  "buttonMenuHint": {
+    "message": "Правый клик — сменить язык"
   }
 }

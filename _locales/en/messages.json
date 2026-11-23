@@ -237,5 +237,13 @@
   },
   "popupChangeShortcut": {
     "message": "Change shortcut"
+  },
+  "menuTranslateTo": {
+    "message": "Translate to",
+    "description": "Header of the right-click language menu"
+  },
+  "buttonMenuHint": {
+    "message": "Right-click to change the language",
+    "description": "Second line of the button tooltip"
   }
 }

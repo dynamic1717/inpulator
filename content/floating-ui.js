@@ -1,7 +1,11 @@
 /** The floating translate button: language pair icon, quota ring, loading and error states. */
 
 import { t } from '../i18n.js';
-import { getLanguage, getShortLabel } from '../translation/languages.js';
+import {
+  getLanguage,
+  getShippedLanguages,
+  getShortLabel,
+} from '../translation/languages.js';
 import buttonCss from './button.css';
 
 export const BUTTON_SIZE = 44;
@@ -105,9 +109,21 @@ function buildProgressRing(usageRatio) {
 </svg>`;
 }
 
-export function createFloatingUi({ onTranslate }) {
+const MENU_GAP = 6;
+const MENU_MARGIN = 8;
+
+/**
+ * @param {{
+ *   onTranslate: () => void,
+ *   onPickLanguage: (languageId: string) => void,
+ * }} handlers
+ */
+export function createFloatingUi({ onTranslate, onPickLanguage }) {
   let host = null;
   let button = null;
+  let menu = null;
+  /** Pair currently shown on the button; the menu offers other targets for it. */
+  let currentPair = null;
 
   // The button lives in a closed shadow root so page CSS cannot restyle it
   // and our CSS cannot leak into the page.
@@ -138,9 +154,93 @@ export function createFloatingUi({ onTranslate }) {
     button.setAttribute('aria-label', t('buttonTranslate'));
     button.addEventListener('mousedown', (event) => event.preventDefault());
     button.addEventListener('click', onTranslate);
+    button.addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (menu) closeMenu();
+      else openMenu();
+    });
 
+    menu = null;
     shadow.append(style, button);
     document.documentElement.appendChild(host);
+  }
+
+  function onDocumentMouseDown(event) {
+    if (event.target !== host) closeMenu();
+  }
+
+  function onDocumentKeyDown(event) {
+    if (event.key === 'Escape') closeMenu();
+  }
+
+  function closeMenu() {
+    if (!menu) return;
+    menu.remove();
+    menu = null;
+    document.removeEventListener('mousedown', onDocumentMouseDown, true);
+    document.removeEventListener('keydown', onDocumentKeyDown, true);
+  }
+
+  // Right-click menu to switch the target language without opening the popup.
+  // Items keep the page selection: mousedown is cancelled and focus never moves.
+  function openMenu() {
+    if (!currentPair || button.disabled || button.hidden) return;
+
+    menu = document.createElement('div');
+    menu.className = 'input-translate-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', t('menuTranslateTo'));
+    menu.addEventListener('mousedown', (event) => event.preventDefault());
+
+    const title = document.createElement('div');
+    title.className = 'input-translate-menu__title';
+    title.textContent = t('menuTranslateTo');
+    menu.append(title);
+
+    for (const lang of getShippedLanguages()) {
+      if (lang.id === currentPair.sourceLanguage) continue;
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'input-translate-menu__item';
+      item.setAttribute('role', 'menuitemradio');
+      item.setAttribute('aria-checked', String(lang.id === currentPair.targetLanguage));
+      item.dataset.languageId = lang.id;
+
+      const code = document.createElement('span');
+      code.className = 'input-translate-menu__code';
+      code.textContent = lang.shortLabel;
+      const name = document.createElement('span');
+      name.textContent = lang.name;
+      item.append(code, name);
+
+      item.addEventListener('click', () => {
+        closeMenu();
+        if (lang.id !== currentPair.targetLanguage) onPickLanguage(lang.id);
+      });
+      menu.append(item);
+    }
+
+    button.after(menu);
+    positionMenu();
+    document.addEventListener('mousedown', onDocumentMouseDown, true);
+    document.addEventListener('keydown', onDocumentKeyDown, true);
+  }
+
+  function positionMenu() {
+    const anchor = button.getBoundingClientRect();
+    const { width, height } = menu.getBoundingClientRect();
+    const below = anchor.bottom + MENU_GAP;
+    const top =
+      below + height <= window.innerHeight - MENU_MARGIN
+        ? below
+        : Math.max(MENU_MARGIN, anchor.top - MENU_GAP - height);
+    const left = Math.min(
+      Math.max(MENU_MARGIN, anchor.left),
+      window.innerWidth - width - MENU_MARGIN
+    );
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
   }
 
   function setPosition(position) {
@@ -150,6 +250,7 @@ export function createFloatingUi({ onTranslate }) {
 
   function setTranslate({ sourceLanguage, targetLanguage, quota = null }) {
     ensureButton();
+    currentPair = { sourceLanguage, targetLanguage };
     button.classList.remove('input-translate-btn--error');
     button.disabled = false;
 
@@ -162,9 +263,10 @@ export function createFloatingUi({ onTranslate }) {
       'aria-label',
       t('buttonTranslateTo', getLanguage(targetLanguage)?.name || targetLanguage)
     );
-    button.title = usedPercent
+    const summary = usedPercent
       ? t('buttonQuotaUsed', pairLabel, usedPercent)
       : pairLabel;
+    button.title = `${summary}\n${t('buttonMenuHint')}`;
   }
 
   return {
@@ -184,6 +286,7 @@ export function createFloatingUi({ onTranslate }) {
     /** @param {{ progress?: number }} [options] progress 0..1 of a language pack download */
     setLoading({ progress } = {}) {
       ensureButton();
+      closeMenu();
       button.classList.remove('input-translate-btn--error');
       button.disabled = true;
       if (progress == null) {
@@ -196,6 +299,7 @@ export function createFloatingUi({ onTranslate }) {
     },
     setError(message) {
       ensureButton();
+      closeMenu();
       const text = String(message || t('errorTranslationFailed'));
       button.classList.add('input-translate-btn--error');
       button.innerHTML = ERROR_ICON;
@@ -214,6 +318,7 @@ export function createFloatingUi({ onTranslate }) {
     },
     hide() {
       if (!button) return;
+      closeMenu();
       button.classList.remove('input-translate-btn--error');
       button.hidden = true;
     },

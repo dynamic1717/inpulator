@@ -249,3 +249,37 @@ test.describe('hotkey without a selection', () => {
     await expect(page.locator('#first')).toHaveText('Первый блок');
   });
 });
+
+test('right-click on the button switches the target language', async ({
+  context,
+  openPage,
+  serviceWorker,
+}) => {
+  await context.route(MYMEMORY, (route) =>
+    route.fulfill({ json: myMemoryReply(route.request().url()) })
+  );
+  const page = await openPage('<textarea id="field">Привет, как дела?</textarea>');
+  await selectAll(page.locator('#field'));
+
+  const button = page.locator('#input-translate-btn');
+  await expect(button).toHaveAttribute('title', /RU → EN/);
+  await button.click({ button: 'right' });
+
+  const menu = page.locator('.input-translate-menu');
+  await expect(menu).toBeVisible();
+  // The source language is not offered as a target.
+  await expect(menu.locator('[data-language-id="ru"]')).toHaveCount(0);
+  await menu.locator('[data-language-id="de"]').click();
+
+  await expect(menu).toBeHidden();
+  await expect(button).toHaveAttribute('title', /RU → DE/);
+  expect(
+    await serviceWorker.evaluate(
+      async () =>
+        (await chrome.storage.local.get('extensionSettings')).extensionSettings
+    )
+  ).toMatchObject({ targetLanguage: 'de' });
+  // The selection survived, so the next click translates it.
+  await button.click();
+  await expect(page.locator('#field')).toHaveValue('EN:ПРИВЕТ, КАК ДЕЛА?');
+});

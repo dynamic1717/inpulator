@@ -5,6 +5,7 @@ import {
   DEFAULT_SETTINGS,
   getSettings,
   isHostBlocked,
+  setSettings,
   subscribeToSettings,
 } from '../settings.js';
 import {
@@ -28,7 +29,12 @@ let selectionGateVersion = 0;
 let lastHotkeyAt = 0;
 let macFallbackEnabled = false;
 let settings = { ...DEFAULT_SETTINGS };
-const ui = createFloatingUi({ onTranslate: onTranslateClick });
+const ui = createFloatingUi({
+  onTranslate: onTranslateClick,
+  // The settings subscription re-renders the button with the new pair.
+  onPickLanguage: (targetLanguage) =>
+    setSettings({ targetLanguage }).catch(handleInvalidatedContext),
+});
 
 // all_frames + match_origin_as_fallback can inject into the same frame only
 // once, but guard anyway so a double injection never doubles the listeners.
