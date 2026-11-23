@@ -127,7 +127,7 @@ export function createFloatingUi({ onTranslate }) {
       host.style.setProperty(property, value, 'important');
     }
 
-    const shadow = host.attachShadow({ mode: 'closed' });
+    const shadow = host.attachShadow({ mode: __E2E__ ? 'open' : 'closed' });
     const style = document.createElement('style');
     style.textContent = buttonCss;
 

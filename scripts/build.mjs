@@ -4,6 +4,7 @@
  *   node scripts/build.mjs           one-off build
  *   node scripts/build.mjs --watch   rebuild on change
  *   node scripts/build.mjs --zip     build, then zip dist/ for the Chrome Web Store
+ *   node scripts/build.mjs --e2e     build into dist-e2e/ for Playwright (open shadow root)
  */
 
 import { execFileSync } from 'node:child_process';
@@ -14,9 +15,10 @@ import { fileURLToPath } from 'node:url';
 import * as esbuild from 'esbuild';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const dist = join(root, 'dist');
 const watch = process.argv.includes('--watch');
 const zip = process.argv.includes('--zip');
+const e2e = process.argv.includes('--e2e');
+const dist = join(root, e2e ? 'dist-e2e' : 'dist');
 
 const STATIC_FILES = [
   'manifest.json',
@@ -54,6 +56,8 @@ const shared = {
   outbase: root,
   target: 'chrome116',
   legalComments: 'none',
+  // E2E builds open the button's shadow root so Playwright locators can reach it.
+  define: { __E2E__: String(e2e) },
   logLevel: 'info',
 };
 

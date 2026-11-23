@@ -8,11 +8,13 @@
     "dev": "node scripts/build.mjs --watch",
     "package": "node scripts/build.mjs --zip",
     "test": "node --test test/*.test.js",
+    "test:e2e": "node scripts/build.mjs --e2e && playwright test",
     "lint": "eslint .",
     "format:check": "prettier --check \"**/*.{js,json,md,css}\"",
     "format:fix": "prettier --write \"**/*.{js,json,md,css}\""
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "esbuild": "^0.25.12",
     "eslint": "^9.0.0",
     "globals": "^15.0.0",
